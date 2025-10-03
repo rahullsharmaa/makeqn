@@ -121,13 +121,16 @@ backend:
     implemented: false
     working: false
     file: "/app/backend/server.py"
-    stuck_count: 0
-    priority: "medium"
+    stuck_count: 1
+    priority: "high"
     needs_retesting: false
     status_history:
         - working: false
         - agent: "testing"
         - comment: "MCQ generation fails with JSON parsing errors due to invalid escape characters in Gemini response. Error: 'Invalid \\escape: line 3 column 24'. Need to improve JSON parsing or prompt engineering."
+        - working: false
+        - agent: "testing"
+        - comment: "CONFIRMED: All question types (MCQ, MSQ, NAT, SUB) fail with same JSON parsing error: 'Expecting property name enclosed in double quotes: line 1 column 2 (char 1)'. This indicates Gemini API is returning malformed JSON that cannot be parsed. Issue affects all question generation, not just MCQ. Priority upgraded to HIGH as this blocks core functionality. Need to investigate Gemini response format and improve JSON parsing robustness."
 
   - task: "NAT validation fix"
     implemented: false

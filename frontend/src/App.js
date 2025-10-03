@@ -376,7 +376,28 @@ function App() {
       part_id: selectedPart === "none" ? null : selectedPart || null,
       slot_id: selectedSlot === "none" ? null : selectedSlot || null,
     });
-    return response.data;
+    
+    // Auto-generated questions are already saved in the database by the generate-question endpoint
+    // Just add the marks and time information to the question data if needed
+    const questionData = response.data;
+    
+    // Update the question with marks and time information
+    const updatedQuestionData = {
+      ...questionData,
+      correct_marks: autoConfig.correctMarks,
+      incorrect_marks: autoConfig.incorrectMarks,
+      skipped_marks: autoConfig.skippedMarks,
+      time_minutes: autoConfig.timeMinutes
+    };
+    
+    // Save the updated question with marks/time info
+    try {
+      await axios.post(`${API}/save-question-manually`, updatedQuestionData);
+    } catch (error) {
+      console.log("Question already saved, continuing...");
+    }
+    
+    return questionData;
   };
 
   const generatePYQSolutionForTopic = async (topicId) => {

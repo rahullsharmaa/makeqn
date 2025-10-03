@@ -587,6 +587,62 @@ function App() {
                 </div>
               </div>
 
+              {/* Auto Mode Question Configuration */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">Question Type for Auto Generation</label>
+                  <Select value={selectedQuestionType} onValueChange={setSelectedQuestionType}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select question type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {questionTypes.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          <div>
+                            <div className="font-medium">{type.label}</div>
+                            <div className="text-xs text-slate-500">{type.description}</div>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">Part (Optional)</label>
+                  <Select value={selectedPart} onValueChange={setSelectedPart}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select part" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Part Selected</SelectItem>
+                      {parts.map((part) => (
+                        <SelectItem key={part.id} value={part.id}>
+                          {part.part_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">Slot (Optional)</label>
+                  <Select value={selectedSlot} onValueChange={setSelectedSlot}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select slot" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Slot Selected</SelectItem>
+                      {slots.map((slot) => (
+                        <SelectItem key={slot.id} value={slot.id}>
+                          {slot.slot_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               {/* Auto Generation Controls */}
               <div className="flex flex-wrap gap-4 justify-center">
                 <Button

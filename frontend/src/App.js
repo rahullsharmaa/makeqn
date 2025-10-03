@@ -257,14 +257,10 @@ function App() {
 
     try {
       // Start auto-generation session
-      const response = await axios.post(`${API}/start-auto-generation`, null, {
-        params: {
-          exam_id: selectedExam,
-          course_id: selectedCourse,
-          generation_mode: generationMode
-        },
-        data: autoConfig
-      });
+      const response = await axios.post(
+        `${API}/start-auto-generation?exam_id=${selectedExam}&course_id=${selectedCourse}&generation_mode=${generationMode}`,
+        autoConfig
+      );
 
       setAutoSession(response.data);
       

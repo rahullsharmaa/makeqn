@@ -118,8 +118,8 @@ backend:
         - comment: "Round-robin system working perfectly. MSQ questions 100% success rate. JSON parsing improved for better reliability."
 
   - task: "MCQ JSON parsing fix"
-    implemented: false
-    working: false
+    implemented: true
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 1
     priority: "high"
@@ -131,6 +131,9 @@ backend:
         - working: false
         - agent: "testing"
         - comment: "CONFIRMED: All question types (MCQ, MSQ, NAT, SUB) fail with same JSON parsing error: 'Expecting property name enclosed in double quotes: line 1 column 2 (char 1)'. This indicates Gemini API is returning malformed JSON that cannot be parsed. Issue affects all question generation, not just MCQ. Priority upgraded to HIGH as this blocks core functionality. Need to investigate Gemini response format and improve JSON parsing robustness."
+        - working: true
+        - agent: "testing"
+        - comment: "RESOLVED: MCQ question generation now working perfectly! Structured JSON output with response_mime_type='application/json' successfully fixed the JSON parsing issues. Generated MCQ question about Harmonic Progression with proper format: question_statement, 4 options, single correct answer (0), and detailed solution. The Gemini 2.0 Flash model now returns valid JSON consistently."
 
   - task: "NAT validation fix"
     implemented: false

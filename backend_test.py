@@ -294,6 +294,42 @@ class QuestionMakerAPITester:
         print("❌ Could not find complete hierarchy in any exam/course/subject/unit/chapter")
         return False
 
+    def test_specific_topic_question_generation(self):
+        """Test question generation with the specific known working topic_id"""
+        print("\n🎯 Testing Question Generation with Known Working Topic ID...")
+        print("=" * 60)
+        
+        # Known working topic_id from previous tests
+        topic_id = "7c583ed3-64bf-4fa0-bf20-058ac4b40737"
+        
+        # Test MSQ first as it was working in previous tests
+        question_types = ["MSQ", "MCQ", "NAT", "SUB"]
+        
+        generation_results = {}
+        
+        for q_type in question_types:
+            print(f"\n🔍 Testing {q_type} question generation...")
+            success, data = self.test_question_generation(topic_id, q_type)
+            generation_results[q_type] = {
+                'success': success,
+                'data': data
+            }
+            
+            if success:
+                print(f"✅ {q_type} question generation: SUCCESS")
+            else:
+                print(f"❌ {q_type} question generation: FAILED")
+        
+        # Summary
+        successful_types = [q_type for q_type, result in generation_results.items() if result['success']]
+        failed_types = [q_type for q_type, result in generation_results.items() if not result['success']]
+        
+        print(f"\n📊 Question Generation Results for Topic {topic_id}:")
+        print(f"   ✅ Successful: {successful_types} ({len(successful_types)}/{len(question_types)})")
+        print(f"   ❌ Failed: {failed_types} ({len(failed_types)}/{len(question_types)})")
+        
+        return generation_results
+
 def main():
     print("🚀 Starting Question Maker API Tests...")
     print("=" * 60)

@@ -20,9 +20,39 @@ supabase_url = os.environ.get('SUPABASE_URL')
 supabase_key = os.environ.get('SUPABASE_ANON_KEY')
 supabase: Client = create_client(supabase_url, supabase_key)
 
-# Gemini AI configuration
-genai.configure(api_key=os.environ.get('GEMINI_API_KEY'))
-model = genai.GenerativeModel('gemini-2.5-flash')
+# Gemini AI configuration with round-robin keys
+GEMINI_API_KEYS = os.environ.get('GEMINI_API_KEYS', '').split(',')
+GEMINI_API_KEYS = [key.strip() for key in GEMINI_API_KEYS if key.strip()]
+
+# Track current key index and failed keys
+current_key_index = 0
+failed_keys = set()
+
+def get_next_working_gemini_key():
+    """Get the next working Gemini API key using round-robin"""
+    global current_key_index
+    
+    if not GEMINI_API_KEYS:
+        raise HTTPException(status_code=500, detail="No Gemini API keys configured")
+    
+    # Remove failed keys from available keys
+    available_keys = [key for key in GEMINI_API_KEYS if key not in failed_keys]
+    
+    if not available_keys:
+        # Reset failed keys if all keys have failed (maybe quotas reset)
+        failed_keys.clear()
+        available_keys = GEMINI_API_KEYS
+    
+    # Use round-robin to select next key
+    key = available_keys[current_key_index % len(available_keys)]
+    current_key_index = (current_key_index + 1) % len(available_keys)
+    
+    return key
+
+def create_gemini_model_with_key(api_key: str):
+    """Create a Gemini model with the specified API key"""
+    genai.configure(api_key=api_key)
+    return genai.GenerativeModel('gemini-2.0-flash')
 
 # Create the main app
 app = FastAPI(title="Question Maker API")

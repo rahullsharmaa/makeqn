@@ -521,6 +521,130 @@ function App() {
           </div>
         </div>
 
+        {/* Auto Generation Configuration */}
+        {isAutoMode && (
+          <Card className="mb-8 border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+            <CardHeader className="bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-t-lg">
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5" />
+                Auto Generation Configuration
+              </CardTitle>
+              <CardDescription className="text-green-100">
+                Configure automatic {generationMode === "new_questions" ? "question generation" : "PYQ solution generation"} settings
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">Correct Marks</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={autoConfig.correctMarks}
+                    onChange={(e) => setAutoConfig(prev => ({...prev, correctMarks: parseFloat(e.target.value)}))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">Incorrect Marks</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={autoConfig.incorrectMarks}
+                    onChange={(e) => setAutoConfig(prev => ({...prev, incorrectMarks: parseFloat(e.target.value)}))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">Skipped Marks</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={autoConfig.skippedMarks}
+                    onChange={(e) => setAutoConfig(prev => ({...prev, skippedMarks: parseFloat(e.target.value)}))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">Time (Minutes)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={autoConfig.timeMinutes}
+                    onChange={(e) => setAutoConfig(prev => ({...prev, timeMinutes: parseFloat(e.target.value)}))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">Total Questions</label>
+                  <input
+                    type="number"
+                    value={autoConfig.totalQuestions}
+                    onChange={(e) => setAutoConfig(prev => ({...prev, totalQuestions: parseInt(e.target.value)}))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+              </div>
+
+              {/* Auto Generation Controls */}
+              <div className="flex flex-wrap gap-4 justify-center">
+                <Button
+                  onClick={startAutoGeneration}
+                  disabled={isAutoGenerating || !selectedExam || !selectedCourse}
+                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
+                >
+                  {isAutoGenerating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Generating...
+                    </>
+                  ) : (
+                    `Start Auto ${generationMode === "new_questions" ? "Question" : "Solution"} Generation`
+                  )}
+                </Button>
+
+                {isAutoGenerating && (
+                  <>
+                    <Button
+                      onClick={isPaused ? resumeAutoGeneration : pauseAutoGeneration}
+                      variant="outline"
+                      className="border-yellow-500 text-yellow-600 hover:bg-yellow-50"
+                    >
+                      {isPaused ? "Resume" : "Pause"}
+                    </Button>
+                    <Button
+                      onClick={stopAutoGeneration}
+                      variant="outline"
+                      className="border-red-500 text-red-600 hover:bg-red-50"
+                    >
+                      Stop
+                    </Button>
+                  </>
+                )}
+              </div>
+
+              {/* Progress Bar */}
+              {isAutoGenerating && autoProgress.total > 0 && (
+                <div className="mt-6 space-y-2">
+                  <div className="flex justify-between text-sm text-slate-600">
+                    <span>Progress: {autoProgress.generated}/{autoProgress.total}</span>
+                    <span>{autoProgress.percentage}%</span>
+                  </div>
+                  <div className="w-full bg-slate-200 rounded-full h-2">
+                    <div
+                      className="bg-gradient-to-r from-green-600 to-emerald-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${autoProgress.percentage}%` }}
+                    />
+                  </div>
+                  {autoProgress.currentTopic && (
+                    <p className="text-xs text-slate-500">Current: {autoProgress.currentTopic}</p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Selection Panel */}
           <div className="lg:col-span-2 space-y-6">

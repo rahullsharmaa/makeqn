@@ -559,9 +559,17 @@ async def generate_question(request: QuestionRequest):
         prompt = f"""
 You are an expert question creator for educational content. Generate a {request.question_type} type question for the following topic:
 
-Topic: {topic['name']}
-Description: {topic.get('description', '')}
-Chapter: {chapter.get('name', '')}
+EXAM CONTEXT:
+- Exam: {exam.get('name', 'Unknown Exam')}
+- Course: {course.get('name', 'Unknown Course')}
+- Subject: {subject.get('name', 'Unknown Subject')}
+- Unit: {unit.get('name', 'Unknown Unit')}
+- Chapter: {chapter.get('name', 'Unknown Chapter')}
+- Topic: {topic['name']}
+
+IMPORTANT: Create questions appropriate for the {exam.get('name', 'exam')} difficulty level and {course.get('name', 'course')} standards. Keep the difficulty suitable for this specific exam and course context.
+
+Topic Description: {topic.get('description', '')}
 
 Question Type Rules:
 - MCQ: Multiple Choice Question with exactly ONE correct answer (4 options)
@@ -572,15 +580,17 @@ Question Type Rules:
 Context from existing questions (DO NOT COPY, use for inspiration only):
 {json.dumps([q['question_statement'] for q in existing_questions.data[:3]], indent=2)}
 
-Previously generated questions (AVOID similar content):
+Previously generated questions in this topic (AVOID similar content - generate something completely different):
 {json.dumps([q['question_statement'] for q in generated_questions.data], indent=2)}
 
 Requirements:
 1. Generate a FRESH, ORIGINAL question that tests understanding of the topic
-2. Make it educationally valuable and appropriately challenging
-3. For MCQ/MSQ: Provide exactly 4 options
-4. Ensure the answer follows the question type rules
-5. Provide a detailed solution explanation
+2. Make it educationally valuable and appropriately challenging for {exam.get('name', 'the exam')}
+3. Ensure difficulty is suitable for {course.get('name', 'the course')} level
+4. For MCQ/MSQ: Provide exactly 4 options with realistic distractors
+5. Ensure the answer follows the question type rules strictly
+6. Provide a detailed solution explanation with clear steps
+7. AVOID any similarity with previously generated questions listed above
 
 Please respond in the following JSON format:
 {{

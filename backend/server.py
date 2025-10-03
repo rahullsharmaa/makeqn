@@ -309,6 +309,215 @@ def validate_question_answer(question_type: str, options: List[str], answer: str
         return len(answer.strip()) > 0
     return False
 
+@api_router.get("/all-topics-with-weightage/{course_id}", response_model=List[TopicWithWeightage])
+async def get_all_topics_with_weightage(course_id: str):
+    """Get all topics with weightage information for a course"""
+    try:
+        # Get all subjects for the course
+        subjects_result = supabase.table("subjects").select("*").eq("course_id", course_id).execute()
+        all_topics = []
+        
+        for subject in subjects_result.data:
+            # Get units for subject
+            units_result = supabase.table("units").select("*").eq("subject_id", subject["id"]).execute()
+            
+            for unit in units_result.data:
+                # Get chapters for unit
+                chapters_result = supabase.table("chapters").select("*").eq("unit_id", unit["id"]).execute()
+                
+                for chapter in chapters_result.data:
+                    # Get topics for chapter
+                    topics_result = supabase.table("topics").select("*").eq("chapter_id", chapter["id"]).execute()
+                    
+                    for topic in topics_result.data:
+                        all_topics.append(TopicWithWeightage(
+                            id=topic["id"],
+                            name=topic["name"],
+                            weightage=topic.get("weightage", 0.0),
+                            chapter_id=chapter["id"],
+                            chapter_name=chapter["name"],
+                            unit_id=unit["id"],
+                            unit_name=unit["name"],
+                            subject_id=subject["id"],
+                            subject_name=subject["name"]
+                        ))
+        
+        return all_topics
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching topics with weightage: {str(e)}")
+
+@api_router.post("/auto-generation-session")
+async def create_auto_generation_session(config: AutoGenerationConfig, exam_id: str, course_id: str, generation_mode: str = "new_questions"):
+    """Create a new auto-generation session"""
+    try:
+        # Get all topics with weightage for the course
+        topics = await get_all_topics_with_weightage(course_id)
+        
+        # Calculate questions per topic based on weightage
+        total_weightage = sum(topic.weightage or 0 for topic in topics)
+        if total_weightage == 0:
+            # If no weightage, distribute equally
+            questions_per_topic = max(1, config.total_questions // len(topics)) if topics else 0
+            for topic in topics:
+                topic.estimated_questions = questions_per_topic
+        else:
+            # Distribute based on weightage
+            remaining_questions = config.total_questions
+            for i, topic in enumerate(topics):
+                if i == len(topics) - 1:  # Last topic gets remaining questions
+                    topic.estimated_questions = remaining_questions
+                else:
+                    topic_questions = max(1, int((topic.weightage or 0) / 100 * config.total_questions))
+                    topic.estimated_questions = topic_questions
+                    remaining_questions -= topic_questions
+        
+        session_id = str(uuid.uuid4())
+        session = AutoGenerationSession(
+            id=session_id,
+            exam_id=exam_id,
+            course_id=course_id,
+            config=config,
+            questions_target=config.total_questions,
+            generation_mode=generation_mode,
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
+        )
+        
+        # Store session in database (we'll use a simple approach for now)
+        session_data = {
+            "id": session_id,
+            "exam_id": exam_id,
+            "course_id": course_id,
+            "config": config.model_dump(),
+            "current_subject_idx": 0,
+            "current_unit_idx": 0,
+            "current_chapter_idx": 0,
+            "current_topic_idx": 0,
+            "questions_generated": 0,
+            "questions_target": config.total_questions,
+            "is_paused": False,
+            "is_completed": False,
+            "generation_mode": generation_mode,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        # For now, we'll return the session. In a real implementation, you'd store this in a sessions table
+        return {"session_id": session_id, "session": session, "topics": topics}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error creating auto-generation session: {str(e)}")
+
+@api_router.post("/generate-pyq-solution", response_model=PYQSolutionResponse)
+async def generate_pyq_solution(request: PYQSolutionRequest):
+    """Generate answer and solution for a PYQ question"""
+    try:
+        # Get topic information for context
+        topic_result = supabase.table("topics").select("*").eq("id", request.topic_id).execute()
+        if not topic_result.data:
+            raise HTTPException(status_code=404, detail="Topic not found")
+        
+        topic = topic_result.data[0]
+        
+        # Get chapter and course information for better context
+        chapter_result = supabase.table("chapters").select("*").eq("id", topic["chapter_id"]).execute()
+        chapter = chapter_result.data[0] if chapter_result.data else {}
+        
+        # Create prompt for Gemini to solve the PYQ
+        prompt = f"""
+You are an expert educator and question solver. Analyze the following previous year question and provide the correct answer and detailed solution.
+
+Topic: {topic['name']}
+Chapter: {chapter.get('name', '')}
+Question Type: {request.question_type}
+
+Question: {request.question_statement}
+
+{f'Options: {request.options}' if request.options else ''}
+
+Your task:
+1. Carefully analyze the question and determine the correct answer
+2. Provide a step-by-step solution explaining the reasoning
+3. Double-check your work to ensure accuracy
+
+Requirements:
+- For MCQ: Provide the correct option index (0-3)
+- For MSQ: Provide comma-separated correct option indices
+- For NAT: Provide the numerical answer
+- For SUB: Provide a comprehensive answer
+
+Respond in the following JSON format:
+{{
+    "answer": "Your answer here (following the format rules above)",
+    "solution": "Detailed step-by-step solution with clear explanations",
+    "confidence_level": "High/Medium/Low - your confidence in this solution"
+}}
+"""
+
+        # Generate response from Gemini with round-robin key handling
+        max_retries = len(GEMINI_API_KEYS)
+        last_error = None
+        
+        for attempt in range(max_retries):
+            try:
+                # Get next working API key
+                current_api_key = get_next_working_gemini_key()
+                
+                # Create model with current key
+                model = create_gemini_model_with_key(current_api_key)
+                
+                # Configure generation for structured JSON output
+                generation_config = genai.types.GenerationConfig(
+                    response_mime_type="application/json",
+                    temperature=0.3  # Lower temperature for more accurate answers
+                )
+                
+                # Generate content with structured output
+                response = model.generate_content(prompt, generation_config=generation_config)
+                break
+                
+            except Exception as e:
+                last_error = e
+                error_str = str(e).lower()
+                
+                # Check if it's a quota/authentication error
+                if "quota" in error_str or "429" in error_str or "exceeded" in error_str or "invalid api key" in error_str:
+                    failed_keys.add(current_api_key)
+                    if attempt == max_retries - 1:
+                        raise HTTPException(status_code=429, detail=f"All Gemini API keys exhausted. Last error: {str(e)}")
+                    continue
+                else:
+                    raise HTTPException(status_code=500, detail=f"Gemini API error: {str(e)}")
+        
+        if last_error and 'response' not in locals():
+            raise HTTPException(status_code=500, detail=f"Failed after all retries: {str(last_error)}")
+        
+        # Parse the JSON response
+        try:
+            response_text = response.text.strip()
+            solution_data = json.loads(response_text)
+        except json.JSONDecodeError as e:
+            raise HTTPException(status_code=500, detail=f"Error parsing AI response: {str(e)}")
+
+        # Validate the solution
+        if not isinstance(solution_data, dict):
+            raise HTTPException(status_code=500, detail="AI response is not a valid object")
+        
+        # Create response
+        pyq_solution = PYQSolutionResponse(
+            question_statement=request.question_statement,
+            answer=solution_data.get("answer", ""),
+            solution=solution_data.get("solution", ""),
+            confidence_level=solution_data.get("confidence_level", "Medium")
+        )
+        
+        return pyq_solution
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating PYQ solution: {str(e)}")
+
 @api_router.post("/generate-question", response_model=GeneratedQuestion)
 async def generate_question(request: QuestionRequest):
     """Generate a new question using Gemini AI"""

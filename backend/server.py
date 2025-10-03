@@ -321,8 +321,14 @@ Please respond in the following JSON format:
                 # Create model with current key
                 model = create_gemini_model_with_key(current_api_key)
                 
-                # Generate content
-                response = model.generate_content(prompt)
+                # Configure generation for structured JSON output
+                generation_config = genai.types.GenerationConfig(
+                    response_mime_type="application/json",
+                    temperature=0.7
+                )
+                
+                # Generate content with structured output
+                response = model.generate_content(prompt, generation_config=generation_config)
                 
                 # If successful, break out of retry loop
                 break

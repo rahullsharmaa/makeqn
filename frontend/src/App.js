@@ -305,8 +305,8 @@ function App() {
       for (let q = 0; q < questionsForTopic && !isPaused; q++) {
         try {
           if (generationMode === "new_questions") {
-            // Generate new questions
-            await generateQuestionForTopic(topicInfo.id, "MCQ"); // Default to MCQ, can be randomized
+            // Generate new questions using the selected question type
+            await generateQuestionForTopic(topicInfo.id, selectedQuestionType);
           } else {
             // Generate PYQ solutions
             await generatePYQSolutionForTopic(topicInfo.id);

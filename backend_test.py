@@ -483,8 +483,8 @@ class QuestionMakerAPITester:
         return new_endpoint_results
 
 def main():
-    print("🚀 Testing Updated Question Generation Endpoint...")
-    print("🎯 Focus: Gemini 2.0 Flash Structured JSON Output")
+    print("🚀 Testing Enhanced Question Generation System Backend...")
+    print("🎯 Focus: New API Endpoints + Enhanced Question Generation")
     print("=" * 60)
     
     tester = QuestionMakerAPITester()
@@ -493,13 +493,71 @@ def main():
     print("\n1️⃣ Testing Basic API Connectivity...")
     tester.test_root_endpoint()
     
-    # Test the specific topic question generation (main focus)
-    print("\n2️⃣ Testing Question Generation with Known Working Topic...")
-    generation_results = tester.test_specific_topic_question_generation()
+    # Test cascading endpoints to get working IDs
+    print("\n2️⃣ Testing Cascading Dropdown Endpoints...")
+    exams = tester.test_exams_endpoint()
     
-    # Test cascading endpoints to ensure they still work
-    print("\n3️⃣ Testing Cascading Dropdown Endpoints...")
-    tester.test_exams_endpoint()
+    # Find ISI->MSQMS course for testing
+    working_course_id = None
+    working_exam_id = None
+    
+    if exams:
+        for exam in exams:
+            if "ISI" in exam.get('name', '').upper():
+                exam_id = exam['id']
+                working_exam_id = exam_id
+                print(f"\n🔍 Found ISI exam: {exam['name']} ({exam_id})")
+                
+                courses = tester.test_courses_endpoint(exam_id)
+                for course in courses:
+                    if "MSQMS" in course.get('name', '').upper():
+                        working_course_id = course['id']
+                        print(f"✅ Found MSQMS course: {course['name']} ({working_course_id})")
+                        break
+                
+                if working_course_id:
+                    break
+    
+    # Use fallback IDs if not found
+    if not working_course_id:
+        working_course_id = "b8f7e2d1-4c3a-4b5e-8f9a-1b2c3d4e5f6g"  # Fallback
+        working_exam_id = "a1b2c3d4-e5f6-7g8h-9i0j-k1l2m3n4o5p6"  # Fallback
+        print(f"⚠️ Using fallback course_id: {working_course_id}")
+    
+    # Test new endpoints
+    print("\n3️⃣ Testing New Enhanced Endpoints...")
+    new_endpoint_results = {}
+    
+    # Update the test method to use found IDs
+    tester.working_course_id = working_course_id
+    tester.working_exam_id = working_exam_id
+    
+    # Test new endpoints individually
+    topic_id = "7c583ed3-64bf-4fa0-bf20-058ac4b40737"
+    
+    # Test 1: All topics with weightage
+    print(f"\n3.1️⃣ Testing All Topics with Weightage...")
+    success, data = tester.test_all_topics_with_weightage(working_course_id)
+    new_endpoint_results['all_topics_with_weightage'] = {'success': success, 'data': data}
+    
+    # Test 2: PYQ Solution Generation
+    print(f"\n3.2️⃣ Testing PYQ Solution Generation...")
+    success, data = tester.test_generate_pyq_solution(topic_id)
+    new_endpoint_results['generate_pyq_solution'] = {'success': success, 'data': data}
+    
+    # Test 3: Manual Question Save
+    print(f"\n3.3️⃣ Testing Manual Question Save...")
+    success, data = tester.test_save_question_manually(topic_id)
+    new_endpoint_results['save_question_manually'] = {'success': success, 'data': data}
+    
+    # Test 4: Auto Generation Start
+    print(f"\n3.4️⃣ Testing Auto Generation Start...")
+    success, data = tester.test_start_auto_generation(working_exam_id, working_course_id)
+    new_endpoint_results['start_auto_generation'] = {'success': success, 'data': data}
+    
+    # Test enhanced question generation
+    print("\n4️⃣ Testing Enhanced Question Generation...")
+    generation_results = tester.test_specific_topic_question_generation()
     
     # Print final results
     print("\n" + "=" * 60)
@@ -510,9 +568,18 @@ def main():
     print(f"Tests Failed: {len(tester.failed_tests)}")
     print(f"Success Rate: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
     
-    # Detailed question generation analysis
+    # New endpoints analysis
+    print(f"\n🆕 NEW ENDPOINTS ANALYSIS:")
+    successful_new = [endpoint for endpoint, result in new_endpoint_results.items() if result['success']]
+    failed_new = [endpoint for endpoint, result in new_endpoint_results.items() if not result['success']]
+    
+    for endpoint, result in new_endpoint_results.items():
+        status = "✅ WORKING" if result['success'] else "❌ FAILED"
+        print(f"   {endpoint}: {status}")
+    
+    # Enhanced question generation analysis
     if generation_results:
-        print(f"\n🎯 QUESTION GENERATION ANALYSIS:")
+        print(f"\n🎯 ENHANCED QUESTION GENERATION ANALYSIS:")
         for q_type, result in generation_results.items():
             status = "✅ WORKING" if result['success'] else "❌ FAILED"
             print(f"   {q_type}: {status}")
@@ -528,13 +595,20 @@ def main():
             if 'response' in failure:
                 print(f"     Response: {failure['response'][:200]}...")
     
-    # Determine if JSON parsing issue is resolved
+    # Overall conclusions
+    new_endpoints_working = len(successful_new) > 0
     question_generation_working = any(result['success'] for result in generation_results.values()) if generation_results else False
     
-    if question_generation_working:
-        print(f"\n✅ CONCLUSION: Gemini 2.0 Flash structured JSON output is working for some question types!")
+    print(f"\n🎯 CONCLUSIONS:")
+    if new_endpoints_working:
+        print(f"✅ New endpoints: {len(successful_new)}/{len(new_endpoint_results)} working")
     else:
-        print(f"\n❌ CONCLUSION: JSON parsing issues persist - structured output may need further investigation")
+        print(f"❌ New endpoints: All failed - need investigation")
+    
+    if question_generation_working:
+        print(f"✅ Enhanced question generation: Working for some question types")
+    else:
+        print(f"❌ Enhanced question generation: Issues persist")
     
     return 0 if len(tester.failed_tests) == 0 else 1
 

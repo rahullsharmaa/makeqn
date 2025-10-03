@@ -22,7 +22,7 @@ supabase: Client = create_client(supabase_url, supabase_key)
 
 # Gemini AI configuration
 genai.configure(api_key=os.environ.get('GEMINI_API_KEY'))
-model = genai.GenerativeModel('gemini-pro')
+model = genai.GenerativeModel('gemini-2.5-flash')
 
 # Create the main app
 app = FastAPI(title="Question Maker API")

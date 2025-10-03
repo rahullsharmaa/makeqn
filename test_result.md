@@ -141,7 +141,9 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Gemini round-robin API key implementation"
+    - "MCQ JSON parsing issues"
+    - "NAT validation issues" 
+    - "SUB database constraint issues"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"

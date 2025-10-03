@@ -220,11 +220,216 @@ function App() {
 
       setGeneratedQuestion(response.data);
       toast.success("Question generated successfully!");
+      
+      // Update counts
+      if (generationMode === "new_questions") {
+        setNewQuestionsCount(prev => prev + 1);
+      }
     } catch (error) {
       toast.error(`Failed to generate question: ${error.response?.data?.detail || error.message}`);
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const saveQuestionManually = async () => {
+    if (!generatedQuestion) {
+      toast.error("No question to save");
+      return;
+    }
+
+    try {
+      await axios.post(`${API}/save-question-manually`, generatedQuestion);
+      toast.success("Question saved to database successfully!");
+    } catch (error) {
+      toast.error(`Failed to save question: ${error.response?.data?.detail || error.message}`);
+    }
+  };
+
+  const startAutoGeneration = async () => {
+    if (!selectedExam || !selectedCourse) {
+      toast.error("Please select an exam and course first");
+      return;
+    }
+
+    setIsAutoGenerating(true);
+    setAutoProgress({ generated: 0, total: autoConfig.totalQuestions, currentTopic: null, percentage: 0 });
+
+    try {
+      // Start auto-generation session
+      const response = await axios.post(`${API}/start-auto-generation`, null, {
+        params: {
+          exam_id: selectedExam,
+          course_id: selectedCourse,
+          generation_mode: generationMode
+        },
+        data: autoConfig
+      });
+
+      setAutoSession(response.data);
+      
+      // Get all topics with weightage for this course
+      const topicsResponse = await axios.get(`${API}/all-topics-with-weightage/${selectedCourse}`);
+      const topics = topicsResponse.data;
+      
+      toast.success("Auto-generation started!");
+      
+      // Start the auto-generation process
+      await processAutoGeneration(topics);
+      
+    } catch (error) {
+      toast.error(`Failed to start auto-generation: ${error.response?.data?.detail || error.message}`);
+      setIsAutoGenerating(false);
+    }
+  };
+
+  const processAutoGeneration = async (topics) => {
+    let totalGenerated = 0;
+    const totalQuestions = autoConfig.totalQuestions;
+    
+    // Calculate questions per topic based on weightage
+    const topicsWithCounts = calculateQuestionsPerTopic(topics, totalQuestions);
+    
+    for (let i = 0; i < topicsWithCounts.length && !isPaused; i++) {
+      const topicInfo = topicsWithCounts[i];
+      const questionsForTopic = topicInfo.estimated_questions;
+      
+      setAutoProgress(prev => ({
+        ...prev,
+        currentTopic: `${topicInfo.subject_name} > ${topicInfo.unit_name} > ${topicInfo.chapter_name} > ${topicInfo.name}`,
+        percentage: Math.round((totalGenerated / totalQuestions) * 100)
+      }));
+
+      // Generate questions for this topic
+      for (let q = 0; q < questionsForTopic && !isPaused; q++) {
+        try {
+          if (generationMode === "new_questions") {
+            // Generate new questions
+            await generateQuestionForTopic(topicInfo.id, "MCQ"); // Default to MCQ, can be randomized
+          } else {
+            // Generate PYQ solutions
+            await generatePYQSolutionForTopic(topicInfo.id);
+          }
+          
+          totalGenerated++;
+          setAutoProgress(prev => ({
+            ...prev,
+            generated: totalGenerated,
+            percentage: Math.round((totalGenerated / totalQuestions) * 100)
+          }));
+
+          if (generationMode === "new_questions") {
+            setNewQuestionsCount(prev => prev + 1);
+          } else {
+            setPyqSolutionsCount(prev => prev + 1);
+          }
+
+          // Small delay to prevent rate limiting
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+        } catch (error) {
+          console.error(`Error generating question for topic ${topicInfo.name}:`, error);
+          toast.error(`Error generating question for ${topicInfo.name}`);
+        }
+      }
+    }
+
+    setIsAutoGenerating(false);
+    if (!isPaused) {
+      toast.success(`Auto-generation completed! Generated ${totalGenerated} ${generationMode === "new_questions" ? "questions" : "solutions"}.`);
+    }
+  };
+
+  const calculateQuestionsPerTopic = (topics, totalQuestions) => {
+    const totalWeightage = topics.reduce((sum, topic) => sum + (topic.weightage || 0), 0);
+    
+    if (totalWeightage === 0) {
+      // If no weightage, distribute equally
+      const questionsPerTopic = Math.max(1, Math.floor(totalQuestions / topics.length));
+      return topics.map(topic => ({
+        ...topic,
+        estimated_questions: questionsPerTopic
+      }));
+    }
+
+    // Distribute based on weightage
+    let remaining = totalQuestions;
+    const result = topics.map((topic, index) => {
+      if (index === topics.length - 1) {
+        // Last topic gets remaining questions
+        return { ...topic, estimated_questions: remaining };
+      } else {
+        const topicQuestions = Math.max(1, Math.round((topic.weightage || 0) / 100 * totalQuestions));
+        remaining -= topicQuestions;
+        return { ...topic, estimated_questions: topicQuestions };
+      }
+    });
+
+    return result;
+  };
+
+  const generateQuestionForTopic = async (topicId, questionType = "MCQ") => {
+    const response = await axios.post(`${API}/generate-question`, {
+      topic_id: topicId,
+      question_type: questionType,
+      part_id: selectedPart === "none" ? null : selectedPart || null,
+      slot_id: selectedSlot === "none" ? null : selectedSlot || null,
+    });
+    return response.data;
+  };
+
+  const generatePYQSolutionForTopic = async (topicId) => {
+    // Get existing PYQ questions for this topic
+    const existingResponse = await axios.get(`${API}/existing-questions/${topicId}`);
+    const existingQuestions = existingResponse.data;
+    
+    if (existingQuestions.length === 0) {
+      return null; // Skip if no PYQ questions available
+    }
+
+    // Pick a random question that doesn't have a solution yet
+    const questionWithoutSolution = existingQuestions.find(q => !q.solution || q.solution.trim() === '');
+    
+    if (!questionWithoutSolution) {
+      return null; // Skip if all questions already have solutions
+    }
+
+    // Generate solution for the PYQ
+    const response = await axios.post(`${API}/generate-pyq-solution`, {
+      topic_id: topicId,
+      question_statement: questionWithoutSolution.question_statement,
+      options: questionWithoutSolution.options,
+      question_type: questionWithoutSolution.question_type || "MCQ"
+    });
+
+    return response.data;
+  };
+
+  const pauseAutoGeneration = () => {
+    setIsPaused(true);
+    toast.info("Auto-generation paused. You can resume anytime.");
+  };
+
+  const resumeAutoGeneration = async () => {
+    setIsPaused(false);
+    toast.info("Resuming auto-generation...");
+    
+    // Get current topics and continue from where we left off
+    try {
+      const topicsResponse = await axios.get(`${API}/all-topics-with-weightage/${selectedCourse}`);
+      const topics = topicsResponse.data;
+      await processAutoGeneration(topics);
+    } catch (error) {
+      toast.error("Failed to resume auto-generation");
+      setIsAutoGenerating(false);
+    }
+  };
+
+  const stopAutoGeneration = () => {
+    setIsPaused(true);
+    setIsAutoGenerating(false);
+    setAutoProgress({ generated: 0, total: 0, currentTopic: null, percentage: 0 });
+    toast.info("Auto-generation stopped.");
   };
 
   const renderOptions = (options, answer, questionType) => {

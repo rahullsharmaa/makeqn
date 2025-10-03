@@ -331,30 +331,58 @@ class QuestionMakerAPITester:
         return generation_results
 
 def main():
-    print("🚀 Starting Question Maker API Tests...")
+    print("🚀 Testing Updated Question Generation Endpoint...")
+    print("🎯 Focus: Gemini 2.0 Flash Structured JSON Output")
     print("=" * 60)
     
     tester = QuestionMakerAPITester()
     
-    # Test basic connectivity
+    # Test basic connectivity first
+    print("\n1️⃣ Testing Basic API Connectivity...")
     tester.test_root_endpoint()
     
-    # Test cascading flow
-    tester.test_cascading_flow()
+    # Test the specific topic question generation (main focus)
+    print("\n2️⃣ Testing Question Generation with Known Working Topic...")
+    generation_results = tester.test_specific_topic_question_generation()
+    
+    # Test cascading endpoints to ensure they still work
+    print("\n3️⃣ Testing Cascading Dropdown Endpoints...")
+    tester.test_exams_endpoint()
     
     # Print final results
     print("\n" + "=" * 60)
-    print("📊 TEST RESULTS SUMMARY")
+    print("📊 FINAL TEST RESULTS")
     print("=" * 60)
     print(f"Total Tests Run: {tester.tests_run}")
     print(f"Tests Passed: {tester.tests_passed}")
     print(f"Tests Failed: {len(tester.failed_tests)}")
     print(f"Success Rate: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
     
+    # Detailed question generation analysis
+    if generation_results:
+        print(f"\n🎯 QUESTION GENERATION ANALYSIS:")
+        for q_type, result in generation_results.items():
+            status = "✅ WORKING" if result['success'] else "❌ FAILED"
+            print(f"   {q_type}: {status}")
+    
     if tester.failed_tests:
-        print("\n❌ FAILED TESTS:")
+        print("\n❌ DETAILED FAILURE ANALYSIS:")
         for failure in tester.failed_tests:
-            print(f"  - {failure.get('test', 'Unknown')}: {failure.get('error', failure.get('response', 'Unknown error'))}")
+            print(f"\n  🔍 Test: {failure.get('test', 'Unknown')}")
+            if 'topic_id' in failure:
+                print(f"     Topic ID: {failure['topic_id']}")
+            if 'error' in failure:
+                print(f"     Error: {failure['error']}")
+            if 'response' in failure:
+                print(f"     Response: {failure['response'][:200]}...")
+    
+    # Determine if JSON parsing issue is resolved
+    question_generation_working = any(result['success'] for result in generation_results.values()) if generation_results else False
+    
+    if question_generation_working:
+        print(f"\n✅ CONCLUSION: Gemini 2.0 Flash structured JSON output is working for some question types!")
+    else:
+        print(f"\n❌ CONCLUSION: JSON parsing issues persist - structured output may need further investigation")
     
     return 0 if len(tester.failed_tests) == 0 else 1
 

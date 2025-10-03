@@ -480,6 +480,45 @@ function App() {
           <p className="text-lg text-slate-600 max-w-2xl mx-auto">
             Generate intelligent, exam-focused questions using advanced AI. Select your parameters and create fresh, educational content.
           </p>
+          
+          {/* Mode Selection */}
+          <div className="flex justify-center gap-4 mt-6">
+            <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-lg border">
+              <input
+                type="radio"
+                id="new_questions"
+                name="generation_mode"
+                value="new_questions"
+                checked={generationMode === "new_questions"}
+                onChange={(e) => setGenerationMode(e.target.value)}
+                className="text-purple-600"
+              />
+              <label htmlFor="new_questions" className="text-sm font-medium text-slate-700">Generate New Questions</label>
+            </div>
+            <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-lg border">
+              <input
+                type="radio"
+                id="pyq_solutions"
+                name="generation_mode"
+                value="pyq_solutions"
+                checked={generationMode === "pyq_solutions"}
+                onChange={(e) => setGenerationMode(e.target.value)}
+                className="text-purple-600"
+              />
+              <label htmlFor="pyq_solutions" className="text-sm font-medium text-slate-700">Generate PYQ Solutions</label>
+            </div>
+          </div>
+
+          {/* Auto Mode Toggle */}
+          <div className="flex justify-center mt-4">
+            <Button
+              onClick={() => setIsAutoMode(!isAutoMode)}
+              variant={isAutoMode ? "default" : "outline"}
+              className={isAutoMode ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white" : ""}
+            >
+              {isAutoMode ? "Manual Mode" : "Auto Mode"}
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

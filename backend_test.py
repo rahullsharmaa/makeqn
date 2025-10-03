@@ -377,8 +377,7 @@ class QuestionMakerAPITester:
         success, data = self.run_test("Save Question Manually", "POST", "save-question-manually", 200, data=request_data)
         if success and data:
             print(f"   Question saved with ID: {data.get('question_id', 'N/A')}")
-            return data
-        return {}
+        return success, data
 
     def test_start_auto_generation(self, exam_id, course_id):
         """Test the new auto-generation start endpoint"""

@@ -699,6 +699,10 @@ Please respond in the following JSON format:
             "difficulty_level": generated_data.get("difficulty_level", "Medium"),
             "part_id": request.part_id,
             "slot_id": request.slot_id,
+            "correct_marks": request.correct_marks,
+            "incorrect_marks": request.incorrect_marks,
+            "skipped_marks": request.skipped_marks,
+            "time_minutes": request.time_minutes,
             "created_at": datetime.now(timezone.utc).isoformat(),
             "updated_at": datetime.now(timezone.utc).isoformat()
         }

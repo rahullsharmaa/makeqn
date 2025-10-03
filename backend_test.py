@@ -294,6 +294,116 @@ class QuestionMakerAPITester:
         print("❌ Could not find complete hierarchy in any exam/course/subject/unit/chapter")
         return False
 
+    def test_all_topics_with_weightage(self, course_id):
+        """Test the new all-topics-with-weightage endpoint"""
+        success, data = self.run_test(f"Get All Topics with Weightage for Course {course_id}", "GET", f"all-topics-with-weightage/{course_id}", 200)
+        if success and data:
+            print(f"   Found {len(data)} topics with weightage")
+            # Show sample topic structure
+            if data:
+                sample_topic = data[0]
+                print(f"   Sample topic: {sample_topic.get('name', 'N/A')} (weightage: {sample_topic.get('weightage', 'N/A')})")
+            return data
+        return []
+
+    def test_generate_pyq_solution(self, topic_id):
+        """Test the new PYQ solution generation endpoint"""
+        request_data = {
+            "topic_id": topic_id,
+            "question_statement": "Find the harmonic mean of 3, 6, and 9.",
+            "options": ["4", "5", "6", "7"],
+            "question_type": "MCQ"
+        }
+        
+        url = f"{self.api_url}/generate-pyq-solution"
+        headers = {'Content-Type': 'application/json'}
+        
+        self.tests_run += 1
+        print(f"\n🔍 Testing Generate PYQ Solution for Topic {topic_id}...")
+        print(f"   URL: {url}")
+        print(f"   Request: {json.dumps(request_data, indent=2)}")
+        
+        try:
+            response = requests.post(url, json=request_data, headers=headers, timeout=60)
+            
+            print(f"   Status Code: {response.status_code}")
+            
+            if response.status_code == 200:
+                self.tests_passed += 1
+                print(f"✅ SUCCESS - PYQ solution generated successfully!")
+                try:
+                    response_data = response.json()
+                    print(f"   Question: {response_data.get('question_statement', '')[:100]}...")
+                    print(f"   Answer: {response_data.get('answer', 'N/A')}")
+                    print(f"   Confidence: {response_data.get('confidence_level', 'N/A')}")
+                    print(f"   Solution: {response_data.get('solution', '')[:150]}...")
+                    return True, response_data
+                except Exception as json_error:
+                    print(f"❌ JSON parsing error: {str(json_error)}")
+                    return False, {}
+            else:
+                print(f"❌ FAILED - Expected 200, got {response.status_code}")
+                print(f"   Error Response: {response.text}")
+                self.failed_tests.append({
+                    'test': "Generate PYQ Solution",
+                    'topic_id': topic_id,
+                    'expected': 200,
+                    'actual': response.status_code,
+                    'response': response.text[:500]
+                })
+                return False, {}
+                
+        except Exception as e:
+            print(f"❌ EXCEPTION - Error: {str(e)}")
+            self.failed_tests.append({
+                'test': "Generate PYQ Solution",
+                'topic_id': topic_id,
+                'error': str(e)
+            })
+            return False, {}
+
+    def test_save_question_manually(self, topic_id):
+        """Test the new manual question save endpoint"""
+        request_data = {
+            "topic_id": topic_id,
+            "topic_name": "Test Topic",
+            "question_statement": "What is 2 + 2?",
+            "question_type": "MCQ",
+            "options": ["2", "3", "4", "5"],
+            "answer": "2",
+            "solution": "Simple addition: 2 + 2 = 4, which corresponds to option index 2.",
+            "difficulty_level": "Easy"
+        }
+        
+        success, data = self.run_test("Save Question Manually", "POST", "save-question-manually", 200, data=request_data)
+        if success and data:
+            print(f"   Question saved with ID: {data.get('question_id', 'N/A')}")
+            return data
+        return {}
+
+    def test_start_auto_generation(self, exam_id, course_id):
+        """Test the new auto-generation start endpoint"""
+        request_data = {
+            "exam_id": exam_id,
+            "course_id": course_id,
+            "config": {
+                "correct_marks": 4.0,
+                "incorrect_marks": -1.0,
+                "skipped_marks": 0.0,
+                "time_minutes": 180.0,
+                "total_questions": 10
+            },
+            "generation_mode": "new_questions"
+        }
+        
+        success, data = self.run_test("Start Auto Generation", "POST", "start-auto-generation", 200, data=request_data)
+        if success and data:
+            print(f"   Session created with ID: {data.get('session_id', 'N/A')}")
+            print(f"   Total topics: {data.get('total_topics', 'N/A')}")
+            print(f"   Status: {data.get('status', 'N/A')}")
+            return data
+        return {}
+
     def test_specific_topic_question_generation(self):
         """Test question generation with the specific known working topic_id"""
         print("\n🎯 Testing Question Generation with Known Working Topic ID...")
@@ -329,6 +439,48 @@ class QuestionMakerAPITester:
         print(f"   ❌ Failed: {failed_types} ({len(failed_types)}/{len(question_types)})")
         
         return generation_results
+
+    def test_new_endpoints_comprehensive(self):
+        """Test all new endpoints with ISI->MSQMS course data"""
+        print("\n🆕 Testing New Enhanced Endpoints...")
+        print("=" * 60)
+        
+        # Known working course_id for ISI->MSQMS
+        course_id = "b8f7e2d1-4c3a-4b5e-8f9a-1b2c3d4e5f6g"  # This should be found from cascading test
+        topic_id = "7c583ed3-64bf-4fa0-bf20-058ac4b40737"
+        exam_id = "a1b2c3d4-e5f6-7g8h-9i0j-k1l2m3n4o5p6"  # This should be found from cascading test
+        
+        new_endpoint_results = {}
+        
+        # Test 1: All topics with weightage
+        print(f"\n1️⃣ Testing All Topics with Weightage...")
+        success, data = self.test_all_topics_with_weightage(course_id)
+        new_endpoint_results['all_topics_with_weightage'] = {'success': success, 'data': data}
+        
+        # Test 2: PYQ Solution Generation
+        print(f"\n2️⃣ Testing PYQ Solution Generation...")
+        success, data = self.test_generate_pyq_solution(topic_id)
+        new_endpoint_results['generate_pyq_solution'] = {'success': success, 'data': data}
+        
+        # Test 3: Manual Question Save
+        print(f"\n3️⃣ Testing Manual Question Save...")
+        success, data = self.test_save_question_manually(topic_id)
+        new_endpoint_results['save_question_manually'] = {'success': success, 'data': data}
+        
+        # Test 4: Auto Generation Start
+        print(f"\n4️⃣ Testing Auto Generation Start...")
+        success, data = self.test_start_auto_generation(exam_id, course_id)
+        new_endpoint_results['start_auto_generation'] = {'success': success, 'data': data}
+        
+        # Summary
+        successful_endpoints = [endpoint for endpoint, result in new_endpoint_results.items() if result['success']]
+        failed_endpoints = [endpoint for endpoint, result in new_endpoint_results.items() if not result['success']]
+        
+        print(f"\n📊 New Endpoints Test Results:")
+        print(f"   ✅ Successful: {successful_endpoints} ({len(successful_endpoints)}/{len(new_endpoint_results)})")
+        print(f"   ❌ Failed: {failed_endpoints} ({len(failed_endpoints)}/{len(new_endpoint_results)})")
+        
+        return new_endpoint_results
 
 def main():
     print("🚀 Testing Updated Question Generation Endpoint...")

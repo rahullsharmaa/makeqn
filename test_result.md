@@ -120,6 +120,42 @@ backend:
         - agent: "testing"
         - comment: "TESTED: Round-robin system is working correctly. MSQ questions generate successfully (100% success rate). MCQ has JSON parsing issues with escape characters. NAT has validation issues. SUB fails due to database constraint 'new_questions_question_type_check'. Core functionality confirmed working with proper API key rotation."
 
+  - task: "MCQ JSON parsing fix"
+    implemented: false
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: false
+        - agent: "testing"
+        - comment: "MCQ generation fails with JSON parsing errors due to invalid escape characters in Gemini response. Error: 'Invalid \\escape: line 3 column 24'. Need to improve JSON parsing or prompt engineering."
+
+  - task: "NAT validation fix"
+    implemented: false
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: false
+        - agent: "testing"
+        - comment: "NAT generation fails with validation errors and JSON parsing issues with control characters. Need to fix validation logic and JSON parsing robustness."
+
+  - task: "SUB database constraint fix"
+    implemented: false
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "low"
+    needs_retesting: false
+    status_history:
+        - working: false
+        - agent: "testing"
+        - comment: "SUB question type fails due to database constraint 'new_questions_question_type_check'. Database schema doesn't allow 'SUB' as valid question_type. Need to check allowed values or update constraint."
+
 frontend:
   - task: "Question generation UI"
     implemented: true

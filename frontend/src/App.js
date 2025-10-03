@@ -251,6 +251,11 @@ function App() {
       toast.error("Please select an exam and course first");
       return;
     }
+    
+    if (!selectedQuestionType) {
+      toast.error("Please select a question type for auto-generation");
+      return;
+    }
 
     setIsAutoGenerating(true);
     setAutoProgress({ generated: 0, total: autoConfig.totalQuestions, currentTopic: null, percentage: 0 });

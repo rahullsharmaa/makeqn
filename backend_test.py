@@ -382,19 +382,20 @@ class QuestionMakerAPITester:
     def test_start_auto_generation(self, exam_id, course_id):
         """Test the new auto-generation start endpoint"""
         request_data = {
+            "correct_marks": 4.0,
+            "incorrect_marks": -1.0,
+            "skipped_marks": 0.0,
+            "time_minutes": 180.0,
+            "total_questions": 10
+        }
+        
+        params = {
             "exam_id": exam_id,
             "course_id": course_id,
-            "config": {
-                "correct_marks": 4.0,
-                "incorrect_marks": -1.0,
-                "skipped_marks": 0.0,
-                "time_minutes": 180.0,
-                "total_questions": 10
-            },
             "generation_mode": "new_questions"
         }
         
-        success, data = self.run_test("Start Auto Generation", "POST", "start-auto-generation", 200, data=request_data)
+        success, data = self.run_test("Start Auto Generation", "POST", "start-auto-generation", 200, data=request_data, params=params)
         if success and data:
             print(f"   Session created with ID: {data.get('session_id', 'N/A')}")
             print(f"   Total topics: {data.get('total_topics', 'N/A')}")

@@ -127,6 +127,64 @@ class GeneratedQuestion(BaseModel):
     slot_id: Optional[str] = None
     created_at: datetime
 
+# New models for enhanced functionality
+class AutoGenerationConfig(BaseModel):
+    correct_marks: float
+    incorrect_marks: float
+    skipped_marks: float
+    time_minutes: float
+    total_questions: int
+
+class AutoGenerationSession(BaseModel):
+    id: str
+    exam_id: str
+    course_id: str
+    config: AutoGenerationConfig
+    current_subject_idx: int = 0
+    current_unit_idx: int = 0
+    current_chapter_idx: int = 0
+    current_topic_idx: int = 0
+    questions_generated: int = 0
+    questions_target: int
+    is_paused: bool = False
+    is_completed: bool = False
+    generation_mode: str = "new_questions"  # "new_questions" or "pyq_solutions"
+    created_at: datetime
+    updated_at: datetime
+
+class TopicWithWeightage(BaseModel):
+    id: str
+    name: str
+    weightage: Optional[float] = None
+    chapter_id: str
+    chapter_name: str
+    unit_id: str
+    unit_name: str
+    subject_id: str
+    subject_name: str
+    estimated_questions: int = 0
+
+class AutoGenerationProgress(BaseModel):
+    session_id: str
+    progress_percentage: float
+    current_topic: Optional[str] = None
+    questions_generated: int
+    questions_target: int
+    estimated_time_remaining: Optional[float] = None
+    can_pause: bool = True
+
+class PYQSolutionRequest(BaseModel):
+    topic_id: str
+    question_statement: str
+    options: Optional[List[str]] = None
+    question_type: str
+
+class PYQSolutionResponse(BaseModel):
+    question_statement: str
+    answer: str
+    solution: str
+    confidence_level: str
+
 # API Routes
 
 @api_router.get("/")

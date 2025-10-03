@@ -168,15 +168,18 @@ backend:
 frontend:
   - task: "Question generation UI"
     implemented: true
-    working: true
+    working: false
     file: "/app/frontend/src/App.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: true
         - agent: "main"
         - comment: "No changes needed - frontend already handles API responses properly. Ready for testing with updated backend."
+        - working: false
+        - agent: "testing"
+        - comment: "CRITICAL DATA ISSUE: Frontend UI is working correctly but cannot complete question generation workflow due to missing database data. All cascading dropdown endpoints return empty arrays for subjects, units, chapters, and topics. API calls work (200 status) but no data exists. UI functionality tested: ✅ Responsive design, ✅ Question type selection (4 types), ✅ Optional part/slot selection, ✅ Proper disabled states, ✅ Error handling. BLOCKER: Database has no subjects for any course, preventing complete workflow testing. Need to populate database with sample data to test question generation."
 
 metadata:
   created_by: "main_agent"

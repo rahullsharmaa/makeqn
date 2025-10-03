@@ -302,7 +302,7 @@ def validate_question_answer(question_type: str, options: List[str], answer: str
         try:
             float(answer)
             return True
-        except:
+        except (ValueError, TypeError):
             return False
     elif question_type == "SUB":
         # SUB can be any text

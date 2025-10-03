@@ -415,7 +415,7 @@ function App() {
                         <SelectValue placeholder="Select part" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">No Part Selected</SelectItem>
+                        <SelectItem value="none">No Part Selected</SelectItem>
                         {parts.map((part) => (
                           <SelectItem key={part.id} value={part.id}>
                             {part.part_name}

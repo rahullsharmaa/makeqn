@@ -64,7 +64,7 @@ class TopicResponse(BaseModel):
     id: str
     chapter_id: str
     name: str
-    description: str
+    description: Optional[str] = None
     weightage: Optional[float] = None
 
 class PartResponse(BaseModel):

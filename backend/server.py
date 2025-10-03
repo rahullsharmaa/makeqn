@@ -112,6 +112,10 @@ class QuestionRequest(BaseModel):
     question_type: str  # MCQ, MSQ, NAT, SUB
     part_id: Optional[str] = None
     slot_id: Optional[str] = None
+    correct_marks: Optional[float] = None
+    incorrect_marks: Optional[float] = None
+    skipped_marks: Optional[float] = None
+    time_minutes: Optional[float] = None
 
 class GeneratedQuestion(BaseModel):
     id: str

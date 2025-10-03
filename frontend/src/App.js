@@ -875,6 +875,24 @@ function App() {
 
           {/* Results Panel */}
           <div className="space-y-6">
+            {/* Statistics Cards */}
+            <div className="grid grid-cols-2 gap-4">
+              <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100">
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl font-bold text-blue-800">{newQuestionsCount}</div>
+                  <div className="text-sm text-blue-600">New Questions Generated</div>
+                  <div className="text-xs text-blue-500">Ready for practice</div>
+                </CardContent>
+              </Card>
+              
+              <Card className="border-0 shadow-lg bg-gradient-to-br from-green-50 to-green-100">
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl font-bold text-green-800">{pyqSolutionsCount}</div>
+                  <div className="text-sm text-green-600">PYQ Solutions Generated</div>
+                  <div className="text-xs text-green-500">Solutions completed</div>
+                </CardContent>
+              </Card>
+            </div>
             {/* Generated Question */}
             {generatedQuestion && (
               <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm">

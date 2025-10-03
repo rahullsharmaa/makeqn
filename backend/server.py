@@ -533,6 +533,22 @@ async def generate_question(request: QuestionRequest):
         chapter_result = supabase.table("chapters").select("*").eq("id", topic["chapter_id"]).execute()
         chapter = chapter_result.data[0] if chapter_result.data else {}
         
+        # Get unit information
+        unit_result = supabase.table("units").select("*").eq("id", chapter.get("unit_id", "")).execute()
+        unit = unit_result.data[0] if unit_result.data else {}
+        
+        # Get subject information
+        subject_result = supabase.table("subjects").select("*").eq("id", unit.get("subject_id", "")).execute()
+        subject = subject_result.data[0] if subject_result.data else {}
+        
+        # Get course information
+        course_result = supabase.table("courses").select("*").eq("id", subject.get("course_id", "")).execute()
+        course = course_result.data[0] if course_result.data else {}
+        
+        # Get exam information
+        exam_result = supabase.table("exams").select("*").eq("id", course.get("exam_id", "")).execute()
+        exam = exam_result.data[0] if exam_result.data else {}
+        
         # Get existing questions for reference (but not to copy)
         existing_questions = supabase.table("questions_topic_wise").select("question_statement, options, question_type").eq("topic_id", request.topic_id).limit(5).execute()
         

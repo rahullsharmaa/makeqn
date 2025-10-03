@@ -355,6 +355,10 @@ Please respond in the following JSON format:
             # Extract JSON from response
             response_text = response.text.strip()
             
+            # Clean the response text from control characters
+            import re
+            response_text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', response_text)
+            
             # Find JSON in the response
             start_idx = response_text.find('{')
             end_idx = response_text.rfind('}') + 1
@@ -363,6 +367,10 @@ Please respond in the following JSON format:
                 raise ValueError("No JSON found in response")
                 
             json_str = response_text[start_idx:end_idx]
+            
+            # Fix common JSON issues
+            json_str = json_str.replace('\n', '\\n').replace('\t', '\\t').replace('\r', '\\r')
+            
             generated_data = json.loads(json_str)
             
         except (json.JSONDecodeError, ValueError) as e:

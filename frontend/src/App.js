@@ -38,6 +38,28 @@ function App() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [existingQuestions, setExistingQuestions] = useState([]);
 
+  // State for auto-generation mode
+  const [isAutoMode, setIsAutoMode] = useState(false);
+  const [autoConfig, setAutoConfig] = useState({
+    correctMarks: 4,
+    incorrectMarks: -1,
+    skippedMarks: 0,
+    timeMinutes: 3,
+    totalQuestions: 30
+  });
+  const [autoSession, setAutoSession] = useState(null);
+  const [isAutoGenerating, setIsAutoGenerating] = useState(false);
+  const [autoProgress, setAutoProgress] = useState({
+    generated: 0,
+    total: 0,
+    currentTopic: null,
+    percentage: 0
+  });
+  const [isPaused, setIsPaused] = useState(false);
+  const [generationMode, setGenerationMode] = useState("new_questions"); // "new_questions" or "pyq_solutions"
+  const [newQuestionsCount, setNewQuestionsCount] = useState(0);
+  const [pyqSolutionsCount, setPyqSolutionsCount] = useState(0);
+
   const questionTypes = [
     { value: "MCQ", label: "MCQ - Multiple Choice (One Answer)", description: "Single correct answer from 4 options" },
     { value: "MSQ", label: "MSQ - Multiple Select (One or More)", description: "One or more correct answers" },

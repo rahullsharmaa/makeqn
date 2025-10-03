@@ -39,7 +39,7 @@ function App() {
   const [existingQuestions, setExistingQuestions] = useState([]);
 
   // State for auto-generation mode
-  const [isAutoMode, setIsAutoMode] = useState(true); // Temporarily set to true for debugging
+  const [isAutoMode, setIsAutoMode] = useState(false);
   const [autoConfig, setAutoConfig] = useState({
     correctMarks: 4,
     incorrectMarks: -1,

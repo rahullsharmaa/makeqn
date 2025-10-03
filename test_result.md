@@ -171,12 +171,12 @@ frontend:
     working: true
     file: "/app/frontend/src/App.js"
     stuck_count: 0
-    priority: "medium"
-    needs_retesting: false
+    priority: "high"
+    needs_retesting: true
     status_history:
         - working: true
         - agent: "main"
-        - comment: "No changes needed - frontend already handles API responses properly"
+        - comment: "No changes needed - frontend already handles API responses properly. Ready for testing with updated backend."
 
 metadata:
   created_by: "main_agent"

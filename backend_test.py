@@ -186,50 +186,68 @@ class QuestionMakerAPITester:
                 if not subjects:
                     print(f"❌ No subjects found for course {course['name']}")
                     continue
-            
-        subject_id = subjects[0]['id']
+                
+                # Try all subjects for this course
+                for subject in subjects:
+                    subject_id = subject['id']
+                    print(f"\n🔍 Trying subject: {subject['name']} ({subject_id})")
+                    
+                    # Get units
+                    units = self.test_units_endpoint(subject_id)
+                    if not units:
+                        print(f"❌ No units found for subject {subject['name']}")
+                        continue
+                    
+                    # Try all units for this subject
+                    for unit in units:
+                        unit_id = unit['id']
+                        print(f"\n🔍 Trying unit: {unit['name']} ({unit_id})")
+                        
+                        # Get chapters
+                        chapters = self.test_chapters_endpoint(unit_id)
+                        if not chapters:
+                            print(f"❌ No chapters found for unit {unit['name']}")
+                            continue
+                        
+                        # Try all chapters for this unit
+                        for chapter in chapters:
+                            chapter_id = chapter['id']
+                            print(f"\n🔍 Trying chapter: {chapter['name']} ({chapter_id})")
+                            
+                            # Get topics
+                            topics = self.test_topics_endpoint(chapter_id)
+                            if not topics:
+                                print(f"❌ No topics found for chapter {chapter['name']}")
+                                continue
+                            
+                            # Found complete hierarchy! Test with first topic
+                            topic_id = topics[0]['id']
+                            topic_name = topics[0]['name']
+                            print(f"\n✅ Found complete hierarchy! Testing with topic: {topic_name} ({topic_id})")
+                            
+                            # Test parts and slots
+                            self.test_parts_endpoint(course_id)
+                            self.test_slots_endpoint(course_id)
+                            
+                            # Test existing questions
+                            self.test_existing_questions_endpoint(topic_id)
+                            
+                            # Test question generation for different types
+                            question_types = ["MCQ", "MSQ", "NAT", "SUB"]
+                            generation_success = 0
+                            for q_type in question_types:
+                                generated = self.test_question_generation(topic_id, q_type)
+                                if generated:
+                                    print(f"✅ Successfully generated {q_type} question")
+                                    generation_success += 1
+                                else:
+                                    print(f"❌ Failed to generate {q_type} question")
+                            
+                            print(f"\n📊 Question Generation Summary: {generation_success}/{len(question_types)} types successful")
+                            return True
         
-        # Get units
-        units = self.test_units_endpoint(subject_id)
-        if not units:
-            print("❌ Cannot proceed - No units found")
-            return False
-            
-        unit_id = units[0]['id']
-        
-        # Get chapters
-        chapters = self.test_chapters_endpoint(unit_id)
-        if not chapters:
-            print("❌ Cannot proceed - No chapters found")
-            return False
-            
-        chapter_id = chapters[0]['id']
-        
-        # Get topics
-        topics = self.test_topics_endpoint(chapter_id)
-        if not topics:
-            print("❌ Cannot proceed - No topics found")
-            return False
-            
-        topic_id = topics[0]['id']
-        
-        # Test parts and slots
-        self.test_parts_endpoint(course_id)
-        self.test_slots_endpoint(course_id)
-        
-        # Test existing questions
-        self.test_existing_questions_endpoint(topic_id)
-        
-        # Test question generation for different types
-        question_types = ["MCQ", "MSQ", "NAT", "SUB"]
-        for q_type in question_types:
-            generated = self.test_question_generation(topic_id, q_type)
-            if generated:
-                print(f"✅ Successfully generated {q_type} question")
-            else:
-                print(f"❌ Failed to generate {q_type} question")
-        
-        return True
+        print("❌ Could not find complete hierarchy in any exam/course/subject/unit/chapter")
+        return False
 
 def main():
     print("🚀 Starting Question Maker API Tests...")

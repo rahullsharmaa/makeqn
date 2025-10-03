@@ -151,3 +151,5 @@ test_plan:
 agent_communication:
     - agent: "main"
     - message: "Updated backend to use multiple Gemini API keys in round-robin fashion. Need to test question generation with new system. Keys should auto-switch when quota exceeded."
+    - agent: "testing"
+    - message: "TESTING COMPLETE: Round-robin system is working correctly. Core functionality confirmed - API keys rotate properly and system handles multiple requests. MSQ questions work perfectly. Issues found: MCQ has JSON parsing problems with escape characters, NAT has validation issues, SUB fails due to database constraint. Cascading dropdown endpoints all working correctly. Recommend fixing the specific question type issues but core round-robin implementation is successful."

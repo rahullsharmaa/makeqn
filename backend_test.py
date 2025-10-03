@@ -399,8 +399,7 @@ class QuestionMakerAPITester:
             print(f"   Session created with ID: {data.get('session_id', 'N/A')}")
             print(f"   Total topics: {data.get('total_topics', 'N/A')}")
             print(f"   Status: {data.get('status', 'N/A')}")
-            return data
-        return {}
+        return success, data
 
     def test_specific_topic_question_generation(self):
         """Test question generation with the specific known working topic_id"""

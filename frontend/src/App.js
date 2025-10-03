@@ -6,7 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Badge } from "./components/ui/badge";
 import { Separator } from "./components/ui/separator";
 import { Loader2, Sparkles, BookOpen, GraduationCap } from "lucide-react";
-import { toast } from "sonner";
+import { Toaster } from "./components/ui/sonner";
+import { toast } from "./components/ui/sonner";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;

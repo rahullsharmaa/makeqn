@@ -190,7 +190,8 @@ metadata:
 test_plan:
   current_focus:
     - "Question generation UI"
-  stuck_tasks: []
+  stuck_tasks:
+    - "Question generation UI"
   test_all: true
   test_priority: "high_first"
 
@@ -199,3 +200,5 @@ agent_communication:
     - message: "Backend round-robin system is working perfectly! Now testing frontend UI functionality with the new Gemini system. Focus on complete question generation flow with all question types (MCQ, MSQ, NAT, SUB)."
     - agent: "testing"
     - message: "TESTING COMPLETE: Round-robin system is working correctly. Core functionality confirmed - API keys rotate properly and system handles multiple requests. MSQ questions work perfectly. Issues found: MCQ has JSON parsing problems with escape characters, NAT has validation issues, SUB fails due to database constraint. Cascading dropdown endpoints all working correctly. Recommend fixing the specific question type issues but core round-robin implementation is successful."
+    - agent: "testing"
+    - message: "FRONTEND TESTING COMPLETE: UI is fully functional but BLOCKED by missing database data. All API endpoints work correctly (200 status) but return empty arrays for subjects/units/chapters/topics. Frontend handles this gracefully with proper disabled states. UI features working: responsive design, question type selection, cascading dropdowns, error handling. CRITICAL BLOCKER: Need to populate database with sample academic hierarchy data to enable end-to-end question generation testing."

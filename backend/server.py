@@ -716,10 +716,9 @@ Please respond in the following JSON format:
 async def save_question_manually(question_data: dict):
     """Save a manually created/reviewed question to the database"""
     try:
-        # Add ID and timestamps if not present
-        if "id" not in question_data:
-            question_data["id"] = str(uuid.uuid4())
-        
+        # Always generate a new UUID to avoid conflicts
+        new_id = str(uuid.uuid4())
+        question_data["id"] = new_id
         question_data["created_at"] = datetime.now(timezone.utc).isoformat()
         question_data["updated_at"] = datetime.now(timezone.utc).isoformat()
         
@@ -729,7 +728,7 @@ async def save_question_manually(question_data: dict):
         if not result.data:
             raise HTTPException(status_code=500, detail="Error saving question to database")
         
-        return {"message": "Question saved successfully", "question_id": question_data["id"]}
+        return {"message": "Question saved successfully", "question_id": new_id}
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error saving question: {str(e)}")

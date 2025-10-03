@@ -136,13 +136,16 @@ backend:
     implemented: false
     working: false
     file: "/app/backend/server.py"
-    stuck_count: 0
-    priority: "medium"
+    stuck_count: 1
+    priority: "high"
     needs_retesting: false
     status_history:
         - working: false
         - agent: "testing"
         - comment: "NAT generation fails with validation errors and JSON parsing issues with control characters. Need to fix validation logic and JSON parsing robustness."
+        - working: false
+        - agent: "testing"
+        - comment: "CONFIRMED: NAT generation fails with same JSON parsing error as all other question types: 'Expecting property name enclosed in double quotes: line 1 column 2 (char 1)'. This is not a validation issue but a fundamental JSON parsing problem with Gemini API responses. Priority upgraded to HIGH as part of overall question generation failure."
 
   - task: "SUB database constraint fix"
     implemented: false

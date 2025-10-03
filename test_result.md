@@ -156,6 +156,18 @@ backend:
         - agent: "testing"
         - comment: "SUB question type fails due to database constraint 'new_questions_question_type_check'. Database schema doesn't allow 'SUB' as valid question_type. Need to check allowed values or update constraint."
 
+  - task: "Cascading dropdown endpoints"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+        - agent: "testing"
+        - comment: "TESTED: All cascading dropdown endpoints working correctly. /api/exams (4 exams), /api/courses/{exam_id} (2 courses), /api/subjects/{course_id}, /api/units/{subject_id}, /api/chapters/{unit_id}, /api/topics/{chapter_id} all responding with 200 status and proper data structure."
+
 frontend:
   - task: "Question generation UI"
     implemented: true

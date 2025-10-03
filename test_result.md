@@ -186,15 +186,13 @@ metadata:
 
 test_plan:
   current_focus:
-    - "MCQ JSON parsing issues"
-    - "NAT validation issues" 
-    - "SUB database constraint issues"
+    - "Question generation UI"
   stuck_tasks: []
-  test_all: false
+  test_all: true
   test_priority: "high_first"
 
 agent_communication:
     - agent: "main"
-    - message: "Updated backend to use multiple Gemini API keys in round-robin fashion. Need to test question generation with new system. Keys should auto-switch when quota exceeded."
+    - message: "Backend round-robin system is working perfectly! Now testing frontend UI functionality with the new Gemini system. Focus on complete question generation flow with all question types (MCQ, MSQ, NAT, SUB)."
     - agent: "testing"
     - message: "TESTING COMPLETE: Round-robin system is working correctly. Core functionality confirmed - API keys rotate properly and system handles multiple requests. MSQ questions work perfectly. Issues found: MCQ has JSON parsing problems with escape characters, NAT has validation issues, SUB fails due to database constraint. Cascading dropdown endpoints all working correctly. Recommend fixing the specific question type issues but core round-robin implementation is successful."

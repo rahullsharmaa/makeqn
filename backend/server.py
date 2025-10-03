@@ -383,25 +383,6 @@ async def create_auto_generation_session(config: AutoGenerationConfig, exam_id: 
             updated_at=datetime.now(timezone.utc)
         )
         
-        # Store session in database (we'll use a simple approach for now)
-        session_data = {
-            "id": session_id,
-            "exam_id": exam_id,
-            "course_id": course_id,
-            "config": config.model_dump(),
-            "current_subject_idx": 0,
-            "current_unit_idx": 0,
-            "current_chapter_idx": 0,
-            "current_topic_idx": 0,
-            "questions_generated": 0,
-            "questions_target": config.total_questions,
-            "is_paused": False,
-            "is_completed": False,
-            "generation_mode": generation_mode,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "updated_at": datetime.now(timezone.utc).isoformat()
-        }
-        
         # For now, we'll return the session. In a real implementation, you'd store this in a sessions table
         return {"session_id": session_id, "session": session, "topics": topics}
         

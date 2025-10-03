@@ -2,7 +2,7 @@ import requests
 import json
 
 def explore_all_data():
-    base_url = "https://exam-genius-10.preview.emergentagent.com/api"
+    base_url = "https://code-importer-11.preview.emergentagent.com/api"
     
     print("🔍 Exploring all available data...")
     

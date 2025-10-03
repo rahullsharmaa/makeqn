@@ -192,8 +192,8 @@ function App() {
       const response = await axios.post(`${API}/generate-question`, {
         topic_id: selectedTopic,
         question_type: selectedQuestionType,
-        part_id: selectedPart || null,
-        slot_id: selectedSlot || null,
+        part_id: selectedPart === "none" ? null : selectedPart || null,
+        slot_id: selectedSlot === "none" ? null : selectedSlot || null,
       });
 
       setGeneratedQuestion(response.data);

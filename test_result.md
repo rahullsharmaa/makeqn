@@ -180,6 +180,54 @@ backend:
         - agent: "testing"
         - comment: "TESTED: All cascading dropdown endpoints working correctly. /api/exams (4 exams), /api/courses/{exam_id} (2 courses), /api/subjects/{course_id}, /api/units/{subject_id}, /api/chapters/{unit_id}, /api/topics/{chapter_id} all responding with 200 status and proper data structure."
 
+  - task: "All topics with weightage endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+        - agent: "testing"
+        - comment: "NEW ENDPOINT TESTED: GET /api/all-topics-with-weightage/{course_id} working perfectly! Returns 88 topics with weightage for ISI->MSQMS course. Each topic includes id, name, weightage, chapter_id, chapter_name, unit_id, unit_name, subject_id, subject_name. Sample topic: 'Harmonic Progression (HP)' with weightage 0.93. Endpoint provides comprehensive topic hierarchy with weightage information for auto-generation planning."
+
+  - task: "PYQ solution generation endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+        - agent: "testing"
+        - comment: "NEW ENDPOINT TESTED: POST /api/generate-pyq-solution working perfectly! Successfully generated solution for harmonic mean question with high confidence. Returns proper JSON with question_statement, answer, solution, and confidence_level. Uses Gemini 2.0 Flash with structured JSON output (response_mime_type='application/json') and lower temperature (0.3) for accurate answers. Round-robin API key system working correctly."
+
+  - task: "Manual question save endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+        - agent: "testing"
+        - comment: "NEW ENDPOINT TESTED: POST /api/save-question-manually working perfectly! Successfully saved manually created question with auto-generated UUID and timestamps. Returns success message with question_id. Accepts complete question data including topic_id, question_statement, question_type, options, answer, solution, difficulty_level. Database insertion working correctly."
+
+  - task: "Auto-generation session start endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+        - agent: "testing"
+        - comment: "NEW ENDPOINT TESTED: POST /api/start-auto-generation working perfectly! Successfully created auto-generation session with session_id, 88 total topics, and 'ready_to_start' status. Accepts exam_id and course_id as query parameters, config as JSON body. Returns session details with total_topics and total_questions_planned. Integration with all-topics-with-weightage endpoint working correctly for session planning."
+
 frontend:
   - task: "Question generation UI"
     implemented: true

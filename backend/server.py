@@ -309,8 +309,46 @@ Please respond in the following JSON format:
 }}
 """
 
-        # Generate response from Gemini
-        response = model.generate_content(prompt)
+        # Generate response from Gemini with round-robin key handling
+        max_retries = len(GEMINI_API_KEYS)
+        last_error = None
+        
+        for attempt in range(max_retries):
+            try:
+                # Get next working API key
+                current_api_key = get_next_working_gemini_key()
+                
+                # Create model with current key
+                model = create_gemini_model_with_key(current_api_key)
+                
+                # Generate content
+                response = model.generate_content(prompt)
+                
+                # If successful, break out of retry loop
+                break
+                
+            except Exception as e:
+                last_error = e
+                error_str = str(e).lower()
+                
+                # Check if it's a quota/authentication error
+                if "quota" in error_str or "429" in error_str or "exceeded" in error_str or "invalid api key" in error_str:
+                    # Mark current key as failed
+                    failed_keys.add(current_api_key)
+                    print(f"API key failed (quota/auth error), marked as failed: {current_api_key[:10]}...")
+                    
+                    # If this was the last attempt, raise the error
+                    if attempt == max_retries - 1:
+                        raise HTTPException(status_code=429, detail=f"All Gemini API keys exhausted. Last error: {str(e)}")
+                    
+                    # Continue to next key
+                    continue
+                else:
+                    # For other errors, don't retry
+                    raise HTTPException(status_code=500, detail=f"Gemini API error: {str(e)}")
+        
+        if last_error and 'response' not in locals():
+            raise HTTPException(status_code=500, detail=f"Failed after all retries: {str(last_error)}")
         
         # Parse the JSON response
         try:

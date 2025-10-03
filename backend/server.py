@@ -658,7 +658,7 @@ Please respond in the following JSON format:
             # the response should be valid JSON directly
             try:
                 generated_data = json.loads(response_text)
-            except json.JSONDecodeError as json_error:
+            except json.JSONDecodeError:
                 # Fallback: try to extract and clean JSON manually
                 import re
                 

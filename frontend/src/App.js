@@ -432,7 +432,7 @@ function App() {
                         <SelectValue placeholder="Select slot" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">No Slot Selected</SelectItem>
+                        <SelectItem value="none">No Slot Selected</SelectItem>
                         {slots.map((slot) => (
                           <SelectItem key={slot.id} value={slot.id}>
                             {slot.slot_name}

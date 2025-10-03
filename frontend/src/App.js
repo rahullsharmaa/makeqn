@@ -513,7 +513,11 @@ function App() {
           <div className="flex justify-center mt-4">
             <div className="text-center">
               <Button
-                onClick={() => setIsAutoMode(!isAutoMode)}
+                onClick={() => {
+                  console.log("Auto Mode button clicked, current state:", isAutoMode);
+                  setIsAutoMode(!isAutoMode);
+                  console.log("Setting Auto Mode to:", !isAutoMode);
+                }}
                 variant={isAutoMode ? "default" : "outline"}
                 className={isAutoMode ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white" : ""}
               >

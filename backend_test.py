@@ -303,8 +303,7 @@ class QuestionMakerAPITester:
             if data:
                 sample_topic = data[0]
                 print(f"   Sample topic: {sample_topic.get('name', 'N/A')} (weightage: {sample_topic.get('weightage', 'N/A')})")
-            return data
-        return []
+        return success, data
 
     def test_generate_pyq_solution(self, topic_id):
         """Test the new PYQ solution generation endpoint"""

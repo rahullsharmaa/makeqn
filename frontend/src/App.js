@@ -511,13 +511,18 @@ function App() {
 
           {/* Auto Mode Toggle */}
           <div className="flex justify-center mt-4">
-            <Button
-              onClick={() => setIsAutoMode(!isAutoMode)}
-              variant={isAutoMode ? "default" : "outline"}
-              className={isAutoMode ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white" : ""}
-            >
-              {isAutoMode ? "Manual Mode" : "Auto Mode"}
-            </Button>
+            <div className="text-center">
+              <Button
+                onClick={() => setIsAutoMode(!isAutoMode)}
+                variant={isAutoMode ? "default" : "outline"}
+                className={isAutoMode ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white" : ""}
+              >
+                {isAutoMode ? "Manual Mode" : "Auto Mode"}
+              </Button>
+              <p className="text-xs text-slate-500 mt-1">
+                Auto Mode: {isAutoMode ? "ON" : "OFF"}
+              </p>
+            </div>
           </div>
         </div>
 

@@ -164,22 +164,28 @@ class QuestionMakerAPITester:
         if not exams:
             print("❌ Cannot proceed - No exams found")
             return False
-            
-        exam_id = exams[0]['id']
         
-        # Get courses
-        courses = self.test_courses_endpoint(exam_id)
-        if not courses:
-            print("❌ Cannot proceed - No courses found")
-            return False
+        # Try all exams to find one with complete data
+        for exam in exams:
+            exam_id = exam['id']
+            print(f"\n🔍 Trying exam: {exam['name']} ({exam_id})")
             
-        course_id = courses[0]['id']
-        
-        # Get subjects
-        subjects = self.test_subjects_endpoint(course_id)
-        if not subjects:
-            print("❌ Cannot proceed - No subjects found")
-            return False
+            # Get courses
+            courses = self.test_courses_endpoint(exam_id)
+            if not courses:
+                print(f"❌ No courses found for exam {exam['name']}")
+                continue
+            
+            # Try all courses for this exam
+            for course in courses:
+                course_id = course['id']
+                print(f"\n🔍 Trying course: {course['name']} ({course_id})")
+                
+                # Get subjects
+                subjects = self.test_subjects_endpoint(course_id)
+                if not subjects:
+                    print(f"❌ No subjects found for course {course['name']}")
+                    continue
             
         subject_id = subjects[0]['id']
         

@@ -136,8 +136,8 @@ backend:
         - comment: "RESOLVED: MCQ question generation now working perfectly! Structured JSON output with response_mime_type='application/json' successfully fixed the JSON parsing issues. Generated MCQ question about Harmonic Progression with proper format: question_statement, 4 options, single correct answer (0), and detailed solution. The Gemini 2.0 Flash model now returns valid JSON consistently."
 
   - task: "NAT validation fix"
-    implemented: false
-    working: false
+    implemented: true
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 1
     priority: "high"
@@ -149,6 +149,9 @@ backend:
         - working: false
         - agent: "testing"
         - comment: "CONFIRMED: NAT generation fails with same JSON parsing error as all other question types: 'Expecting property name enclosed in double quotes: line 1 column 2 (char 1)'. This is not a validation issue but a fundamental JSON parsing problem with Gemini API responses. Priority upgraded to HIGH as part of overall question generation failure."
+        - working: true
+        - agent: "testing"
+        - comment: "RESOLVED: NAT question generation now working perfectly! Structured JSON output configuration resolved all JSON parsing issues. Generated NAT question about harmonic mean with proper numerical answer (6) and detailed solution. Validation logic correctly accepts numerical answers. The issue was indeed JSON parsing, not validation logic."
 
   - task: "SUB database constraint fix"
     implemented: false

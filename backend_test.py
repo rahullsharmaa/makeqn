@@ -134,7 +134,7 @@ class QuestionMakerAPITester:
         return []
 
     def test_question_generation(self, topic_id, question_type):
-        """Test question generation"""
+        """Test question generation with detailed error reporting"""
         request_data = {
             "topic_id": topic_id,
             "question_type": question_type,
@@ -142,18 +142,63 @@ class QuestionMakerAPITester:
             "slot_id": None
         }
         
-        success, data = self.run_test(
-            f"Generate {question_type} Question for Topic {topic_id}", 
-            "POST", 
-            "generate-question", 
-            200, 
-            data=request_data
-        )
+        url = f"{self.api_url}/generate-question"
+        headers = {'Content-Type': 'application/json'}
         
-        if success and data:
-            print(f"   Generated question: {data.get('question_statement', '')[:100]}...")
-            return data
-        return None
+        self.tests_run += 1
+        print(f"\n🔍 Testing Generate {question_type} Question for Topic {topic_id}...")
+        print(f"   URL: {url}")
+        print(f"   Request: {json.dumps(request_data, indent=2)}")
+        
+        try:
+            response = requests.post(url, json=request_data, headers=headers, timeout=60)
+            
+            print(f"   Status Code: {response.status_code}")
+            print(f"   Response Headers: {dict(response.headers)}")
+            
+            if response.status_code == 200:
+                self.tests_passed += 1
+                print(f"✅ SUCCESS - Question generated successfully!")
+                try:
+                    response_data = response.json()
+                    print(f"   Generated Question: {response_data.get('question_statement', '')[:150]}...")
+                    print(f"   Question Type: {response_data.get('question_type', 'N/A')}")
+                    print(f"   Options: {response_data.get('options', 'N/A')}")
+                    print(f"   Answer: {response_data.get('answer', 'N/A')}")
+                    print(f"   Difficulty: {response_data.get('difficulty_level', 'N/A')}")
+                    return True, response_data
+                except Exception as json_error:
+                    print(f"❌ JSON parsing error: {str(json_error)}")
+                    print(f"   Raw response: {response.text[:500]}...")
+                    return False, {}
+            else:
+                print(f"❌ FAILED - Expected 200, got {response.status_code}")
+                print(f"   Error Response: {response.text}")
+                
+                # Try to parse error details
+                try:
+                    error_data = response.json()
+                    print(f"   Error Detail: {error_data.get('detail', 'No detail provided')}")
+                except:
+                    pass
+                
+                self.failed_tests.append({
+                    'test': f"Generate {question_type} Question",
+                    'topic_id': topic_id,
+                    'expected': 200,
+                    'actual': response.status_code,
+                    'response': response.text[:500]
+                })
+                return False, {}
+                
+        except Exception as e:
+            print(f"❌ EXCEPTION - Error: {str(e)}")
+            self.failed_tests.append({
+                'test': f"Generate {question_type} Question",
+                'topic_id': topic_id,
+                'error': str(e)
+            })
+            return False, {}
 
     def test_cascading_flow(self):
         """Test the complete cascading dropdown flow"""

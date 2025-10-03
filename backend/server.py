@@ -34,31 +34,31 @@ api_router = APIRouter(prefix="/api")
 class ExamResponse(BaseModel):
     id: str
     name: str
-    description: str
+    description: Optional[str] = None
 
 class CourseResponse(BaseModel):
     id: str
     exam_id: str
     name: str
-    description: str
+    description: Optional[str] = None
 
 class SubjectResponse(BaseModel):
     id: str
     course_id: str
     name: str
-    description: str
+    description: Optional[str] = None
 
 class UnitResponse(BaseModel):
     id: str
     subject_id: str
     name: str
-    description: str
+    description: Optional[str] = None
 
 class ChapterResponse(BaseModel):
     id: str
     unit_id: str
     name: str
-    description: str
+    description: Optional[str] = None
 
 class TopicResponse(BaseModel):
     id: str

@@ -731,6 +731,85 @@ Please respond in the following JSON format:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating question: {str(e)}")
 
+@api_router.post("/save-question-manually")
+async def save_question_manually(question_data: dict):
+    """Save a manually created/reviewed question to the database"""
+    try:
+        # Add ID and timestamps if not present
+        if "id" not in question_data:
+            question_data["id"] = str(uuid.uuid4())
+        
+        question_data["created_at"] = datetime.now(timezone.utc).isoformat()
+        question_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        
+        # Save to database
+        result = supabase.table("new_questions").insert(question_data).execute()
+        
+        if not result.data:
+            raise HTTPException(status_code=500, detail="Error saving question to database")
+        
+        return {"message": "Question saved successfully", "question_id": question_data["id"]}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error saving question: {str(e)}")
+
+@api_router.post("/start-auto-generation")
+async def start_auto_generation(
+    exam_id: str,
+    course_id: str, 
+    config: AutoGenerationConfig,
+    generation_mode: str = "new_questions"
+):
+    """Start automatic question generation process"""
+    try:
+        # Create session
+        session_response = await create_auto_generation_session(config, exam_id, course_id, generation_mode)
+        session_id = session_response["session_id"]
+        topics = session_response["topics"]
+        
+        # Store session state (in a real app, you'd use a proper database table)
+        # For now, we'll return the initial state
+        
+        return {
+            "session_id": session_id,
+            "total_topics": len(topics),
+            "total_questions_planned": config.total_questions,
+            "status": "ready_to_start",
+            "message": "Auto-generation session created. Ready to start generating questions."
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error starting auto-generation: {str(e)}")
+
+@api_router.post("/auto-generate-next-question/{session_id}")
+async def auto_generate_next_question(session_id: str):
+    """Generate the next question in an auto-generation session"""
+    try:
+        # In a real implementation, you'd load the session state from database
+        # For now, we'll return a placeholder response
+        return {
+            "message": "Auto-generation logic will be implemented in frontend",
+            "session_id": session_id,
+            "status": "use_frontend_logic"
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error in auto-generation: {str(e)}")
+
+@api_router.get("/auto-generation-progress/{session_id}")
+async def get_auto_generation_progress(session_id: str):
+    """Get progress of auto-generation session"""
+    try:
+        # In a real implementation, you'd load this from database
+        return {
+            "session_id": session_id,
+            "message": "Progress tracking will be handled by frontend",
+            "status": "use_frontend_logic"
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting progress: {str(e)}")
+
 # Include the router in the main app
 app.include_router(api_router)
 

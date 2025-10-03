@@ -390,6 +390,17 @@ Please respond in the following JSON format:
         except (json.JSONDecodeError, ValueError) as e:
             raise HTTPException(status_code=500, detail=f"Error parsing AI response: {str(e)}")
 
+        # Handle case where Gemini returns an array instead of a single object
+        if isinstance(generated_data, list):
+            if len(generated_data) > 0:
+                generated_data = generated_data[0]  # Take the first item
+            else:
+                raise HTTPException(status_code=500, detail="AI returned empty array response")
+        
+        # Ensure generated_data is a dictionary
+        if not isinstance(generated_data, dict):
+            raise HTTPException(status_code=500, detail=f"AI response is not a valid object. Got: {type(generated_data)}")
+        
         # Validate the generated question
         options = generated_data.get("options", [])
         answer = generated_data.get("answer", "")

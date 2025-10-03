@@ -295,7 +295,7 @@ def validate_question_answer(question_type: str, options: List[str], answer: str
         try:
             answer_indices = [int(x.strip()) for x in answer.split(",") if x.strip().isdigit()]
             return len(answer_indices) >= 1 and all(0 <= idx < len(options) for idx in answer_indices)
-        except:
+        except (ValueError, TypeError, AttributeError):
             return False
     elif question_type == "NAT":
         # NAT should be a numerical value

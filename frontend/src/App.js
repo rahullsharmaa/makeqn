@@ -279,7 +279,18 @@ function App() {
       await processAutoGeneration(topics);
       
     } catch (error) {
-      toast.error(`Failed to start auto-generation: ${error.response?.data?.detail || error.message}`);
+      console.error("Auto-generation error:", error);
+      let errorMessage = "Unknown error occurred";
+      
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(`Failed to start auto-generation: ${errorMessage}`);
       setIsAutoGenerating(false);
     }
   };

@@ -198,10 +198,12 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Question generation UI"
+    - "MCQ JSON parsing fix"
+    - "NAT validation fix"
   stuck_tasks:
-    - "Question generation UI"
-  test_all: true
+    - "MCQ JSON parsing fix"
+    - "NAT validation fix"
+  test_all: false
   test_priority: "high_first"
 
 agent_communication:

@@ -157,13 +157,16 @@ backend:
     implemented: false
     working: false
     file: "/app/backend/server.py"
-    stuck_count: 0
-    priority: "low"
+    stuck_count: 1
+    priority: "medium"
     needs_retesting: false
     status_history:
         - working: false
         - agent: "testing"
         - comment: "SUB question type fails due to database constraint 'new_questions_question_type_check'. Database schema doesn't allow 'SUB' as valid question_type. Need to check allowed values or update constraint."
+        - working: false
+        - agent: "testing"
+        - comment: "CONFIRMED: SUB question generation still fails with database constraint violation. JSON parsing is now working (Gemini generates valid JSON), but database schema constraint 'new_questions_question_type_check' rejects 'SUB' as valid question_type. Error: 'new row for relation new_questions violates check constraint new_questions_question_type_check'. Database schema needs to be updated to allow 'SUB' question type."
 
   - task: "Cascading dropdown endpoints"
     implemented: true

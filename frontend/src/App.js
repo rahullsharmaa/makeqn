@@ -836,25 +836,38 @@ function App() {
                 <Separator className="my-6" />
 
                 <div className="text-center">
-                  <Button 
-                    onClick={generateQuestion}
-                    disabled={!selectedTopic || !selectedQuestionType || isGenerating}
-                    size="lg"
-                    className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-3"
-                    data-testid="generate-question-btn"
-                  >
-                    {isGenerating ? (
-                      <>
-                        <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                        Generating Question...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="h-5 w-5 mr-2" />
-                        Generate Question
-                      </>
+                  <div className="flex flex-wrap gap-4 justify-center">
+                    <Button 
+                      onClick={generateQuestion}
+                      disabled={!selectedTopic || !selectedQuestionType || isGenerating || isAutoMode}
+                      size="lg"
+                      className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-3"
+                      data-testid="generate-question-btn"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                          Generating Question...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-5 w-5 mr-2" />
+                          Generate Question
+                        </>
+                      )}
+                    </Button>
+
+                    {generatedQuestion && !isAutoMode && (
+                      <Button
+                        onClick={saveQuestionManually}
+                        variant="outline"
+                        size="lg"
+                        className="border-green-500 text-green-600 hover:bg-green-50 px-8 py-3"
+                      >
+                        Save to Database
+                      </Button>
                     )}
-                  </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

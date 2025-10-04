@@ -283,10 +283,19 @@ function App() {
     setAutoProgress({ generated: 0, total: autoConfig.totalQuestions, currentTopic: null, percentage: 0 });
 
     try {
+      // Transform autoConfig to match backend expected format (camelCase to snake_case)
+      const configForBackend = {
+        correct_marks: autoConfig.correctMarks,
+        incorrect_marks: autoConfig.incorrectMarks,
+        skipped_marks: autoConfig.skippedMarks,
+        time_minutes: autoConfig.timeMinutes,
+        total_questions: autoConfig.totalQuestions
+      };
+
       // Start auto-generation session
       const response = await axios.post(
         `${API}/start-auto-generation?exam_id=${selectedExam}&course_id=${selectedCourse}&generation_mode=${generationMode}`,
-        autoConfig
+        configForBackend
       );
 
       setAutoSession(response.data);

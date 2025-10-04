@@ -430,7 +430,6 @@ def validate_question_answer(question_type: str, options: List[str], answer) -> 
         elif isinstance(answer, str):
             # Try to parse as JSON array first
             try:
-                import json
                 parsed_answer = json.loads(answer)
                 if isinstance(parsed_answer, list):
                     return len(parsed_answer) >= 1 and options and all(opt in options for opt in parsed_answer)

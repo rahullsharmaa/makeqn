@@ -357,6 +357,13 @@ function App() {
     let totalGenerated = 0;
     const totalQuestions = autoConfig.totalQuestions;
     
+    // Question types to cycle through (all 4 types)
+    const questionTypes = ["MCQ", "MSQ", "NAT", "SUB"];
+    let currentQuestionTypeIndex = 0;
+    
+    // If a specific question type is selected, use only that type
+    const useAllTypes = !selectedQuestionType || selectedQuestionType === "";
+    
     // Calculate questions per topic based on weightage
     const topicsWithCounts = calculateQuestionsPerTopic(topics, totalQuestions);
     
@@ -376,11 +383,19 @@ function App() {
         let maxRetries = 3;
         let success = false;
         
+        // Determine question type for this question
+        let currentQuestionType = questionType;
+        if (useAllTypes && generationMode === "new_questions") {
+          currentQuestionType = questionTypes[currentQuestionTypeIndex];
+          currentQuestionTypeIndex = (currentQuestionTypeIndex + 1) % questionTypes.length;
+        }
+        
         while (retryCount < maxRetries && !success && !isPaused) {
           try {
             if (generationMode === "new_questions") {
-              // Generate new questions using the specified question type
-              await generateQuestionForTopic(topicInfo.id, questionType);
+              // Generate new questions using the current question type
+              await generateQuestionForTopic(topicInfo.id, currentQuestionType);
+              console.log(`Generated ${currentQuestionType} question for topic: ${topicInfo.name}`);
             } else {
               // Generate PYQ solutions
               const result = await generatePYQSolutionForTopic(topicInfo.id);

@@ -704,7 +704,14 @@ function App() {
                   <input
                     type="number"
                     value={autoConfig.totalQuestions}
-                    onChange={(e) => setAutoConfig(prev => ({...prev, totalQuestions: parseInt(e.target.value)}))}
+                    onChange={(e) => {
+                      const newValue = parseInt(e.target.value);
+                      setAutoConfig(prev => ({...prev, totalQuestions: newValue}));
+                      // Update topics preview when total questions change
+                      if (selectedCourse) {
+                        setTimeout(() => loadTopicsPreview(selectedCourse), 100);
+                      }
+                    }}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>

@@ -362,52 +362,60 @@ function App() {
   const processAutoGeneration = async (topics, questionType = "MCQ") => {
     let totalGenerated = 0;
     const totalQuestions = autoConfig.totalQuestions;
-    
+
     // Question types to cycle through (all 4 types)
     const questionTypes = ["MCQ", "MSQ", "NAT", "SUB"];
     let currentQuestionTypeIndex = 0;
-    
+
     // If a specific question type is selected, use only that type
     const useAllTypes = !selectedQuestionType || selectedQuestionType === "";
-    
-    // Calculate questions per topic based on weightage
+
+    // Calculate questions per topic based on weightage - FIXED: Now properly calculates based on weightage percentage
     const topicsWithCounts = calculateQuestionsPerTopic(topics, totalQuestions);
-    
+
+    console.log("Topics with question counts:", topicsWithCounts.map(t => ({
+      name: t.name,
+      weightage: t.weightage,
+      questions: t.estimated_questions
+    })));
+
     for (let i = 0; i < topicsWithCounts.length && !isPaused; i++) {
       const topicInfo = topicsWithCounts[i];
       const questionsForTopic = topicInfo.estimated_questions;
-      
+
+      console.log(`Processing topic: ${topicInfo.name}, Generating ${questionsForTopic} questions (${topicInfo.weightage}% weightage)`);
+
       setAutoProgress(prev => ({
         ...prev,
-        currentTopic: `${topicInfo.subject_name} > ${topicInfo.unit_name} > ${topicInfo.chapter_name} > ${topicInfo.name}`,
+        currentTopic: `${topicInfo.subject_name} > ${topicInfo.unit_name} > ${topicInfo.chapter_name} > ${topicInfo.name} (${questionsForTopic} questions)`,
         percentage: Math.round((totalGenerated / totalQuestions) * 100)
       }));
 
-      // Generate questions for this topic
-      for (let q = 0; q < questionsForTopic && !isPaused; q++) {
+      // Generate the calculated number of questions for this topic based on weightage
+      for (let q = 0; q < questionsForTopic && !isPaused && totalGenerated < totalQuestions; q++) {
         let retryCount = 0;
         let maxRetries = 3;
         let success = false;
-        
+
         // Determine question type for this question
         let currentQuestionType = questionType;
         if (useAllTypes && generationMode === "new_questions") {
           currentQuestionType = questionTypes[currentQuestionTypeIndex];
           currentQuestionTypeIndex = (currentQuestionTypeIndex + 1) % questionTypes.length;
         }
-        
+
         while (retryCount < maxRetries && !success && !isPaused) {
           try {
             if (generationMode === "new_questions") {
               // Generate new questions using the current question type
               await generateQuestionForTopic(topicInfo.id, currentQuestionType);
-              console.log(`Generated ${currentQuestionType} question for topic: ${topicInfo.name}`);
+              console.log(`✓ Generated ${currentQuestionType} question ${q + 1}/${questionsForTopic} for topic: ${topicInfo.name}`);
             } else {
               // For PYQ solutions mode, we'll process all at once at the course level
               // This is handled separately in startPYQSolutionGeneration
               success = true;
             }
-            
+
             success = true;
             totalGenerated++;
             setAutoProgress(prev => ({
@@ -424,14 +432,16 @@ function App() {
 
             // Small delay to prevent rate limiting
             await new Promise(resolve => setTimeout(resolve, 1000));
-            
+
           } catch (error) {
             retryCount++;
             console.error(`Error generating ${generationMode === "new_questions" ? "question" : "solution"} for topic ${topicInfo.name} (attempt ${retryCount}/${maxRetries}):`, error);
-            
+
             if (retryCount >= maxRetries) {
               console.error(`Failed to generate ${generationMode === "new_questions" ? "question" : "solution"} for topic ${topicInfo.name} after ${maxRetries} attempts`);
-              toast.error(`Skipped topic ${topicInfo.name} after ${maxRetries} failed attempts`);
+              toast.error(`Skipped question ${q + 1} for ${topicInfo.name} after ${maxRetries} attempts`);
+              // Don't increment totalGenerated on failure
+              break;
             } else {
               // Wait before retry
               await new Promise(resolve => setTimeout(resolve, 2000));
@@ -449,48 +459,57 @@ function App() {
 
   const calculateQuestionsPerTopic = (topics, totalQuestions) => {
     const totalWeightage = topics.reduce((sum, topic) => sum + (topic.weightage || 0), 0);
-    
+
+    console.log(`Calculating distribution for ${topics.length} topics, ${totalQuestions} total questions`);
+    console.log(`Total weightage: ${totalWeightage}%`);
+
     if (totalWeightage === 0) {
       // If no weightage, distribute equally
       const questionsPerTopic = Math.max(1, Math.floor(totalQuestions / topics.length));
       return topics.map(topic => ({
         ...topic,
-        estimated_questions: questionsPerTopic
+        estimated_questions: questionsPerTopic,
+        weightage_percent: 0
       }));
     }
 
-    // Distribute based on weightage
+    // FIXED: Properly distribute based on weightage percentage
     let totalAllocated = 0;
     const result = topics.map((topic) => {
       const weightagePercent = topic.weightage || 0;
       let topicQuestions;
-      
-      if (weightagePercent === 0) {
-        // If weightage is 0%, generate 1 question as per user requirement
+
+      if (weightagePercent === 0 || weightagePercent < 0.01) {
+        // If weightage is effectively 0%, still generate 1 question
         topicQuestions = 1;
       } else {
-        // Calculate based on weightage percentage
-        topicQuestions = Math.round((weightagePercent / 100) * totalQuestions);
+        // Calculate based on exact weightage percentage
+        // For example: 5.4434% of 1000 questions = 54.434 ≈ 54 questions
+        const exactQuestions = (weightagePercent / 100) * totalQuestions;
+        topicQuestions = Math.round(exactQuestions);
         // Ensure at least 1 question per topic with weightage
         topicQuestions = Math.max(1, topicQuestions);
       }
-      
+
       totalAllocated += topicQuestions;
-      return { 
-        ...topic, 
+      return {
+        ...topic,
         estimated_questions: topicQuestions,
-        weightage_percent: weightagePercent 
+        weightage_percent: weightagePercent
       };
     });
 
-    // Adjust if we allocated more/less than requested
+    // Adjust if we allocated more/less than requested due to rounding
     const difference = totalQuestions - totalAllocated;
+    console.log(`Allocation difference: ${difference} (allocated: ${totalAllocated}, target: ${totalQuestions})`);
+
     if (difference !== 0 && result.length > 0) {
       // Add/remove questions from the topic with highest weightage
-      const maxWeightageIndex = result.reduce((maxIndex, topic, index) => 
-        topic.weightage_percent > result[maxIndex].weightage_percent ? index : maxIndex, 0);
-      result[maxWeightageIndex].estimated_questions = Math.max(1, 
-        result[maxWeightageIndex].estimated_questions + difference);
+      const maxWeightageIndex = result.reduce((maxIndex, topic, index) =>
+        (topic.weightage_percent || 0) > (result[maxIndex].weightage_percent || 0) ? index : maxIndex, 0);
+      const adjustment = result[maxWeightageIndex].estimated_questions + difference;
+      result[maxWeightageIndex].estimated_questions = Math.max(1, adjustment);
+      console.log(`Adjusted ${result[maxWeightageIndex].name} by ${difference} questions to ${result[maxWeightageIndex].estimated_questions}`);
     }
 
     return result;
@@ -661,31 +680,60 @@ function App() {
   const renderOptions = (options, answer, questionType) => {
     if (!options) return null;
 
-    let correctIndices = [];
+    // FIXED: Handle both old format (indices) and new format (complete option text)
+    let correctOptions = [];
+
     if (questionType === "MCQ" || questionType === "MSQ") {
-      correctIndices = answer.split(",").map(i => parseInt(i.trim()));
+      // Try to parse as complete option text first (new format)
+      if (typeof answer === 'string') {
+        // Check if answer contains complete option text
+        if (options.includes(answer)) {
+          correctOptions = [answer];
+        } else {
+          // Try to parse as JSON array (for MSQ)
+          try {
+            const parsed = JSON.parse(answer);
+            if (Array.isArray(parsed)) {
+              correctOptions = parsed;
+            } else {
+              // Fallback to old format (indices)
+              const indices = answer.split(",").map(i => parseInt(i.trim()));
+              correctOptions = indices.map(idx => options[idx]).filter(Boolean);
+            }
+          } catch {
+            // Fallback to old format (indices)
+            const indices = answer.split(",").map(i => parseInt(i.trim()));
+            correctOptions = indices.map(idx => options[idx]).filter(Boolean);
+          }
+        }
+      } else if (Array.isArray(answer)) {
+        correctOptions = answer;
+      }
     }
 
     return (
       <div className="space-y-2 mt-4">
-        {options.map((option, index) => (
-          <div 
-            key={index} 
-            className={`p-3 rounded-lg border-2 ${
-              correctIndices.includes(index) 
-                ? 'border-emerald-500 bg-emerald-50' 
-                : 'border-slate-200 bg-slate-50'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <span className="font-medium text-slate-700">({String.fromCharCode(65 + index)})</span>
-              <span className="text-slate-900">{option}</span>
-              {correctIndices.includes(index) && (
-                <Badge variant="default" className="ml-auto bg-emerald-500">Correct</Badge>
-              )}
+        {options.map((option, index) => {
+          const isCorrect = correctOptions.includes(option);
+          return (
+            <div
+              key={index}
+              className={`p-3 rounded-lg border-2 ${
+                isCorrect
+                  ? 'border-emerald-500 bg-emerald-50'
+                  : 'border-slate-200 bg-slate-50'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-slate-700">({String.fromCharCode(65 + index)})</span>
+                <span className="text-slate-900">{option}</span>
+                {isCorrect && (
+                  <Badge variant="default" className="ml-auto bg-emerald-500">Correct</Badge>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   };

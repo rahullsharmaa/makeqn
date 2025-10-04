@@ -833,100 +833,44 @@ Respond in the following JSON format:
 
 @api_router.post("/generate-course-pyq-solutions", response_model=PYQSolutionProgress)
 async def generate_course_pyq_solutions(request: CoursePYQSolutionRequest):
-    """Generate solutions for all PYQ questions in a course"""
+    """Generate solutions for all PYQ questions in a course - processes ALL questions from questions_topic_wise table"""
     try:
-        # Get all topics for the course that have PYQ questions without solutions
-        pyq_questions_query = """
-            SELECT q.*, t.name as topic_name, t.notes as topic_notes
-            FROM questions_topic_wise q
-            JOIN topics t ON q.topic_id = t.id
-            JOIN chapters c ON t.chapter_id = c.id
-            JOIN units u ON c.unit_id = u.id
-            JOIN subjects s ON u.subject_id = s.id
-            WHERE s.course_id = %s 
-            AND (q.solution IS NULL OR q.solution = '' OR q.solution_done = false)
-            ORDER BY t.name, q.question_statement
-            LIMIT 100
-        """
-        
-        # Use raw SQL to get the questions with proper joins
-        try:
-            # Get questions through the API - first get all topics for the course
-            topics_result = supabase.rpc('get_course_topics_with_questions', {
-                'p_course_id': request.course_id
-            }).execute()
-            
-            if not topics_result.data:
-                # Fallback: get topics directly and then find questions
-                course_topics = supabase.table("topics").select("""
-                    id, name, notes,
-                    chapters!inner(
-                        units!inner(
-                            subjects!inner(
-                                course_id
-                            )
-                        )
-                    )
-                """).eq("chapters.units.subjects.course_id", request.course_id).execute()
-                
-                if not course_topics.data:
-                    return PYQSolutionProgress(
-                        total_questions=0,
-                        processed_questions=0,
-                        successful_solutions=0,
-                        failed_solutions=0,
-                        is_completed=True,
-                        error_message="No topics found for this course"
-                    )
-            
-            # Get all PYQ questions that need solutions
-            all_questions = []
-            topic_ids = [topic['id'] for topic in course_topics.data] if course_topics.data else []
-            
-            for topic_id in topic_ids:
-                questions_result = supabase.table("questions_topic_wise").select("*").eq("topic_id", topic_id).execute()
-                for question in questions_result.data:
-                    # Check if solution is missing or solution_done is false
-                    if (not question.get('solution') or 
-                        question.get('solution', '').strip() == '' or 
-                        not question.get('solution_done', False)):
-                        
-                        # Add topic info to question
-                        topic_info = next((t for t in course_topics.data if t['id'] == topic_id), {})
-                        question['topic_name'] = topic_info.get('name', '')
-                        question['topic_notes'] = topic_info.get('notes', '')
-                        all_questions.append(question)
-            
-        except Exception:
-            # Fallback approach if RPC doesn't exist
-            # Get all questions for the course topics
-            all_questions = []
-            
-            # First get topics for the course
-            topics_query = supabase.table("topics").select("""
-                *,
-                chapters!inner(
-                    units!inner(
-                        subjects!inner(
-                            course_id
-                        )
+        # Get all questions for the course topics - FIXED: Now processes ALL questions regardless of solution status
+        all_questions = []
+
+        # First get all topics for the course using nested query
+        topics_query = supabase.table("topics").select("""
+            *,
+            chapters!inner(
+                units!inner(
+                    subjects!inner(
+                        course_id
                     )
                 )
-            """).eq("chapters.units.subjects.course_id", request.course_id).execute()
-            
-            for topic in topics_query.data:
-                # Get questions for each topic that need solutions
-                questions_result = supabase.table("questions_topic_wise").select("*").eq("topic_id", topic['id']).execute()
-                
-                for question in questions_result.data:
-                    # Check if solution is missing or solution_done is false
-                    if (not question.get('solution') or 
-                        question.get('solution', '').strip() == '' or 
-                        not question.get('solution_done', False)):
-                        
-                        question['topic_name'] = topic.get('name', '')
-                        question['topic_notes'] = topic.get('notes', '')
-                        all_questions.append(question)
+            )
+        """).eq("chapters.units.subjects.course_id", request.course_id).execute()
+
+        if not topics_query.data:
+            return PYQSolutionProgress(
+                total_questions=0,
+                processed_questions=0,
+                successful_solutions=0,
+                failed_solutions=0,
+                is_completed=True,
+                error_message="No topics found for this course"
+            )
+
+        # Get all PYQ questions from questions_topic_wise table
+        for topic in topics_query.data:
+            # Get ALL questions for each topic from questions_topic_wise table
+            questions_result = supabase.table("questions_topic_wise").select("*").eq("topic_id", topic['id']).execute()
+
+            for question in questions_result.data:
+                # FIXED: Process ALL questions, not just ones without solutions
+                # This ensures we can regenerate solutions if needed
+                question['topic_name'] = topic.get('name', '')
+                question['topic_notes'] = topic.get('notes', '')
+                all_questions.append(question)
         
         total_questions = len(all_questions)
         
@@ -1044,15 +988,25 @@ Respond in the following JSON format:
                         # Parse response using robust parsing
                         response_text = response.text.strip()
                         solution_data = robust_parse_json(response_text)
-                        
-                        # Update the question in the database with the solution
+
+                        # Update the question in the database with the solution and marking scheme
                         update_data = {
                             "answer": solution_data.get("answer", ""),
                             "solution": solution_data.get("solution", ""),
                             "solution_done": True,
                             "updated_at": datetime.now(timezone.utc).isoformat()
                         }
-                        
+
+                        # Add marking scheme if not already present (use default values if missing)
+                        if not question.get('correct_marks'):
+                            update_data['correct_marks'] = 4.0
+                        if not question.get('incorrect_marks'):
+                            update_data['incorrect_marks'] = -1.0
+                        if not question.get('skipped_marks'):
+                            update_data['skipped_marks'] = 0.0
+                        if not question.get('time_minutes'):
+                            update_data['time_minutes'] = 3.0
+
                         # Update the question in questions_topic_wise table
                         update_result = supabase.table("questions_topic_wise").update(update_data).eq("id", question['id']).execute()
                         

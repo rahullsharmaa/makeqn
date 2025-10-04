@@ -402,6 +402,196 @@ class QuestionMakerAPITester:
             print(f"   Status: {data.get('status', 'N/A')}")
         return success, data
 
+    def test_object_object_error_investigation(self):
+        """Investigate the '[object Object]' error in start-auto-generation endpoint"""
+        print("\n🔍 INVESTIGATING '[object Object]' ERROR...")
+        print("=" * 60)
+        
+        # Test 1: Valid request with sample data from review request
+        print("\n1️⃣ Testing with sample data from review request...")
+        request_data = {
+            "correct_marks": 4.0,
+            "incorrect_marks": -1.0, 
+            "skipped_marks": 0.0,
+            "time_minutes": 2.0,
+            "total_questions": 10
+        }
+        
+        params = {
+            "exam_id": "test",
+            "course_id": "test",
+            "generation_mode": "new_questions"
+        }
+        
+        url = f"{self.api_url}/start-auto-generation"
+        headers = {'Content-Type': 'application/json'}
+        
+        print(f"   URL: {url}")
+        print(f"   Params: {params}")
+        print(f"   Body: {json.dumps(request_data, indent=2)}")
+        
+        try:
+            response = requests.post(url, json=request_data, headers=headers, params=params, timeout=30)
+            print(f"   Status Code: {response.status_code}")
+            print(f"   Response Headers: {dict(response.headers)}")
+            print(f"   Raw Response: {response.text}")
+            
+            if response.status_code != 200:
+                try:
+                    error_data = response.json()
+                    print(f"   Parsed Error: {json.dumps(error_data, indent=2)}")
+                    
+                    # Check if error is an array or object
+                    if isinstance(error_data, list):
+                        print(f"   ⚠️ ERROR IS AN ARRAY with {len(error_data)} items")
+                        for i, item in enumerate(error_data):
+                            print(f"      Item {i}: {item}")
+                    elif isinstance(error_data, dict):
+                        print(f"   ⚠️ ERROR IS AN OBJECT with keys: {list(error_data.keys())}")
+                        if 'detail' in error_data:
+                            detail = error_data['detail']
+                            if isinstance(detail, list):
+                                print(f"   ⚠️ DETAIL IS AN ARRAY with {len(detail)} items")
+                                for i, item in enumerate(detail):
+                                    print(f"      Detail {i}: {item}")
+                            else:
+                                print(f"   Detail: {detail}")
+                    
+                except Exception as parse_error:
+                    print(f"   ❌ Could not parse error response: {parse_error}")
+                    
+        except Exception as e:
+            print(f"   ❌ Request failed: {e}")
+        
+        # Test 2: Invalid data to trigger validation errors
+        print("\n2️⃣ Testing with invalid data to see validation errors...")
+        invalid_requests = [
+            {
+                "name": "Missing required fields",
+                "data": {},
+                "params": {"exam_id": "test", "course_id": "test"}
+            },
+            {
+                "name": "Invalid data types",
+                "data": {
+                    "correct_marks": "invalid",
+                    "incorrect_marks": "invalid",
+                    "skipped_marks": "invalid",
+                    "time_minutes": "invalid",
+                    "total_questions": "invalid"
+                },
+                "params": {"exam_id": "test", "course_id": "test"}
+            },
+            {
+                "name": "Missing query parameters",
+                "data": request_data,
+                "params": {}
+            }
+        ]
+        
+        for test_case in invalid_requests:
+            print(f"\n   Testing: {test_case['name']}")
+            try:
+                response = requests.post(url, json=test_case['data'], headers=headers, params=test_case['params'], timeout=30)
+                print(f"   Status: {response.status_code}")
+                print(f"   Response: {response.text[:300]}...")
+                
+                if response.status_code != 200:
+                    try:
+                        error_data = response.json()
+                        if isinstance(error_data, list):
+                            print(f"   ⚠️ VALIDATION ERROR IS ARRAY: {len(error_data)} items")
+                        elif isinstance(error_data, dict) and 'detail' in error_data:
+                            detail = error_data['detail']
+                            if isinstance(detail, list):
+                                print(f"   ⚠️ VALIDATION DETAIL IS ARRAY: {len(detail)} items")
+                                print(f"   First validation error: {detail[0] if detail else 'None'}")
+                    except:
+                        pass
+                        
+            except Exception as e:
+                print(f"   ❌ Request failed: {e}")
+        
+        # Test 3: Check what actual exam_id and course_id values exist
+        print("\n3️⃣ Checking actual exam_id and course_id values in database...")
+        
+        # Get exams
+        try:
+            exams_response = requests.get(f"{self.api_url}/exams", headers=headers, timeout=30)
+            if exams_response.status_code == 200:
+                exams = exams_response.json()
+                print(f"   Found {len(exams)} exams:")
+                for exam in exams[:3]:  # Show first 3
+                    print(f"      - {exam.get('name', 'N/A')} (ID: {exam.get('id', 'N/A')})")
+                
+                # Test with real exam_id and course_id
+                if exams:
+                    real_exam_id = exams[0]['id']
+                    print(f"\n   Testing with real exam_id: {real_exam_id}")
+                    
+                    # Get courses for this exam
+                    courses_response = requests.get(f"{self.api_url}/courses/{real_exam_id}", headers=headers, timeout=30)
+                    if courses_response.status_code == 200:
+                        courses = courses_response.json()
+                        print(f"   Found {len(courses)} courses for this exam:")
+                        for course in courses[:3]:  # Show first 3
+                            print(f"      - {course.get('name', 'N/A')} (ID: {course.get('id', 'N/A')})")
+                        
+                        if courses:
+                            real_course_id = courses[0]['id']
+                            print(f"\n   Testing start-auto-generation with real IDs...")
+                            print(f"   exam_id: {real_exam_id}")
+                            print(f"   course_id: {real_course_id}")
+                            
+                            real_params = {
+                                "exam_id": real_exam_id,
+                                "course_id": real_course_id,
+                                "generation_mode": "new_questions"
+                            }
+                            
+                            response = requests.post(url, json=request_data, headers=headers, params=real_params, timeout=30)
+                            print(f"   Status: {response.status_code}")
+                            print(f"   Response: {response.text}")
+                            
+                            if response.status_code == 200:
+                                print("   ✅ SUCCESS with real IDs!")
+                            else:
+                                try:
+                                    error_data = response.json()
+                                    print(f"   ❌ Error with real IDs: {json.dumps(error_data, indent=2)}")
+                                except:
+                                    print(f"   ❌ Error with real IDs (unparseable): {response.text}")
+                    
+        except Exception as e:
+            print(f"   ❌ Failed to get exams: {e}")
+        
+        # Test 4: Test all-topics-with-weightage endpoint
+        print("\n4️⃣ Testing all-topics-with-weightage endpoint...")
+        try:
+            # Try with a known course_id or test course_id
+            test_course_ids = ["test", "b8f7e2d1-4c3a-4b5e-8f9a-1b2c3d4e5f6g"]
+            
+            for course_id in test_course_ids:
+                print(f"\n   Testing with course_id: {course_id}")
+                response = requests.get(f"{self.api_url}/all-topics-with-weightage/{course_id}", headers=headers, timeout=30)
+                print(f"   Status: {response.status_code}")
+                print(f"   Response: {response.text[:300]}...")
+                
+                if response.status_code == 200:
+                    try:
+                        topics_data = response.json()
+                        print(f"   ✅ Found {len(topics_data)} topics")
+                        if topics_data:
+                            print(f"   Sample topic: {topics_data[0].get('name', 'N/A')}")
+                    except:
+                        print(f"   ❌ Could not parse topics response")
+                        
+        except Exception as e:
+            print(f"   ❌ Failed to test all-topics-with-weightage: {e}")
+        
+        print("\n🎯 INVESTIGATION COMPLETE")
+        print("=" * 60)
+
     def test_specific_topic_question_generation(self):
         """Test question generation with the specific known working topic_id"""
         print("\n🎯 Testing Question Generation with Known Working Topic ID...")

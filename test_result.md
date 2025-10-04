@@ -172,8 +172,8 @@ backend:
     implemented: false
     working: false
     file: "/app/backend/server.py"
-    stuck_count: 1
-    priority: "medium"
+    stuck_count: 2
+    priority: "high"
     needs_retesting: false
     status_history:
         - working: false
@@ -182,6 +182,9 @@ backend:
         - working: false
         - agent: "testing"
         - comment: "CONFIRMED: SUB question generation still fails with database constraint violation. JSON parsing is now working (Gemini generates valid JSON), but database schema constraint 'new_questions_question_type_check' rejects 'SUB' as valid question_type. Error: 'new row for relation new_questions violates check constraint new_questions_question_type_check'. Database schema needs to be updated to allow 'SUB' question type."
+        - working: false
+        - agent: "testing"
+        - comment: "COMPREHENSIVE TESTING COMPLETE: Tested all 4 question types with topic_id '7c583ed3-64bf-4fa0-bf20-058ac4b40737'. RESULTS: MCQ ✅ SUCCESS (generates valid questions), MSQ ✅ SUCCESS (generates valid questions), NAT ❌ VALIDATION FAILURE (generates questions but fails validation rules), SUB ❌ DATABASE CONSTRAINT VIOLATION (Error: 'new row for relation new_questions violates check constraint new_questions_question_type_check'). ROOT CAUSE CONFIRMED: Database constraint 'new_questions_question_type_check' only allows ['MCQ', 'MSQ'] but rejects 'SUB' and potentially 'NAT'. SOLUTION REQUIRED: Update database schema constraint to include 'SUB' and 'NAT' as valid question_type values. Current working types: 2/4 (50% success rate)."
 
   - task: "Cascading dropdown endpoints"
     implemented: true

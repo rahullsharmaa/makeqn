@@ -407,32 +407,54 @@ async def update_question_solution(request: UpdateQuestionSolution):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error updating question solution: {str(e)}")
-def validate_question_answer(question_type: str, options: List[str], answer: str) -> bool:
-    """Validate that the question answer follows the rules"""
+def validate_question_answer(question_type: str, options: List[str], answer) -> bool:
+    """Validate that the question answer follows the rules - supports both index format and new complete option text format"""
     if question_type == "MCQ":
         # MCQ should have exactly one correct answer
-        try:
-            answer_indices = [int(x.strip()) for x in answer.split(",") if x.strip().isdigit()]
-            return len(answer_indices) == 1 and all(0 <= idx < len(options) for idx in answer_indices)
-        except (ValueError, TypeError, AttributeError):
-            return False
+        if isinstance(answer, str):
+            # Check if it's the new format (complete option text) 
+            if options and answer in options:
+                return True
+            # Check if it's the old format (indices)
+            try:
+                answer_indices = [int(x.strip()) for x in answer.split(",") if x.strip().isdigit()]
+                return len(answer_indices) == 1 and all(0 <= idx < len(options) for idx in answer_indices)
+            except (ValueError, TypeError, AttributeError):
+                return False
+        return False
     elif question_type == "MSQ":
         # MSQ should have one or more correct answers
-        try:
-            answer_indices = [int(x.strip()) for x in answer.split(",") if x.strip().isdigit()]
-            return len(answer_indices) >= 1 and all(0 <= idx < len(options) for idx in answer_indices)
-        except (ValueError, TypeError, AttributeError):
-            return False
+        if isinstance(answer, list):
+            # New format: list of complete option texts
+            return len(answer) >= 1 and options and all(opt in options for opt in answer)
+        elif isinstance(answer, str):
+            # Try to parse as JSON array first
+            try:
+                import json
+                parsed_answer = json.loads(answer)
+                if isinstance(parsed_answer, list):
+                    return len(parsed_answer) >= 1 and options and all(opt in options for opt in parsed_answer)
+            except (json.JSONDecodeError, ValueError):
+                pass
+            # Check if it's the old format (comma-separated indices)
+            try:
+                answer_indices = [int(x.strip()) for x in answer.split(",") if x.strip().isdigit()]
+                return len(answer_indices) >= 1 and all(0 <= idx < len(options) for idx in answer_indices)
+            except (ValueError, TypeError, AttributeError):
+                return False
+        return False
     elif question_type == "NAT":
         # NAT should be a numerical value
         try:
-            float(answer)
+            if isinstance(answer, (int, float)):
+                return True
+            float(str(answer))
             return True
         except (ValueError, TypeError):
             return False
     elif question_type == "SUB":
         # SUB can be any text
-        return len(answer.strip()) > 0
+        return len(str(answer).strip()) > 0
     return False
 
 @api_router.get("/all-topics-with-weightage/{course_id}", response_model=List[TopicWithWeightage])

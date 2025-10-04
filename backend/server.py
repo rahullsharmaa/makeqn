@@ -749,8 +749,8 @@ Requirements:
 
 Respond in the following JSON format:
 {{
-    "answer": "Your answer here (following the format rules above)",
-    "solution": "Detailed step-by-step solution with clear explanations using concepts from the topic notes",
+    "answer": "Complete option text for MCQ, JSON array for MSQ, numerical value for NAT, or descriptive answer for SUB",
+    "solution": "Detailed step-by-step solution with LaTeX formatting for all mathematical content",
     "confidence_level": "High/Medium/Low - your confidence in this solution"
 }}
 """
@@ -1007,8 +1007,8 @@ Your task:
 
 Respond in the following JSON format:
 {{
-    "answer": "Your answer here (following the format rules above)",
-    "solution": "Detailed step-by-step solution with clear explanations using concepts from the topic notes",
+    "answer": "Complete option text for MCQ, JSON array for MSQ, numerical value for NAT, or descriptive answer for SUB",
+    "solution": "Detailed step-by-step solution with LaTeX formatting for all mathematical content",
     "confidence_level": "High/Medium/Low - your confidence in this solution"
 }}
 """

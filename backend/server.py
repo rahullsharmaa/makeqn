@@ -1171,7 +1171,7 @@ Please respond in the following JSON format:
                 # Create model with current key
                 model = create_gemini_model_with_key(current_api_key)
                 
-                # Define JSON schema for consistent output
+                # Define JSON schema for consistent output - simplified to allow flexible answer format
                 response_schema = genai.protos.Schema(
                     type=genai.protos.Type.OBJECT,
                     properties={
@@ -1180,7 +1180,7 @@ Please respond in the following JSON format:
                             type=genai.protos.Type.ARRAY,
                             items=genai.protos.Schema(type=genai.protos.Type.STRING)
                         ),
-                        "answer": genai.protos.Schema(type=genai.protos.Type.STRING),
+                        "answer": genai.protos.Schema(type=genai.protos.Type.STRING),  # Will be converted after parsing
                         "solution": genai.protos.Schema(type=genai.protos.Type.STRING),
                         "difficulty_level": genai.protos.Schema(type=genai.protos.Type.STRING)
                     },

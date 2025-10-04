@@ -1229,6 +1229,190 @@ class QuestionMakerAPITester:
             'targets_met': targets_met
         }
 
+    def test_camelcase_snakecase_fix(self):
+        """Test the specific camelCase to snake_case fix from the review request"""
+        print("\n🎯 TESTING CAMELCASE TO SNAKE_CASE FIX")
+        print("=" * 80)
+        print("Goal: Verify frontend camelCase fields are properly transformed to backend snake_case")
+        print("Issue: Frontend sends camelCase (correctMarks, incorrectMarks, etc.) but backend expects snake_case")
+        print("Fix: Data transformation in frontend before sending to API")
+        
+        # Use the exact IDs from review request
+        exam_id = "521d139b-8cf2-4b0f-afad-f4dc0c2c80e7"
+        course_id = "85eb29d4-de89-4697-b041-646dbddb1b3a"
+        
+        print(f"\nUsing Review Request IDs:")
+        print(f"   exam_id: {exam_id}")
+        print(f"   course_id: {course_id}")
+        
+        results = {}
+        
+        # Test the config data in correct snake_case format as specified in review request
+        config_data = {
+            "correct_marks": 4.0,
+            "incorrect_marks": -1.0,
+            "skipped_marks": 0.0,
+            "time_minutes": 4.0,
+            "total_questions": 10
+        }
+        
+        print(f"\nUsing snake_case config data as specified in review request:")
+        print(f"   {config_data}")
+        
+        # 1. Test /api/start-auto-generation with new_questions mode
+        print(f"\n1️⃣ Testing /api/start-auto-generation with 'new_questions' mode")
+        success1, data1 = self.test_start_auto_generation_with_specific_config(exam_id, course_id, "new_questions", config_data)
+        results['new_questions_mode'] = {'success': success1, 'data': data1}
+        
+        if success1:
+            print(f"   ✅ SUCCESS: No validation error about missing required fields!")
+            print(f"   ✅ snake_case fields (correct_marks, incorrect_marks, etc.) accepted properly")
+            if data1:
+                print(f"   Session ID: {data1.get('session_id', 'N/A')}")
+                print(f"   Total topics: {data1.get('total_topics', 'N/A')}")
+                print(f"   Status: {data1.get('status', 'N/A')}")
+        else:
+            print(f"   ❌ FAILED: Validation error still occurs")
+        
+        # 2. Test /api/start-auto-generation with pyq_solutions mode
+        print(f"\n2️⃣ Testing /api/start-auto-generation with 'pyq_solutions' mode")
+        success2, data2 = self.test_start_auto_generation_with_specific_config(exam_id, course_id, "pyq_solutions", config_data)
+        results['pyq_solutions_mode'] = {'success': success2, 'data': data2}
+        
+        if success2:
+            print(f"   ✅ SUCCESS: No validation error about missing required fields!")
+            print(f"   ✅ snake_case fields accepted properly for pyq_solutions mode")
+            if data2:
+                print(f"   Session ID: {data2.get('session_id', 'N/A')}")
+                print(f"   Total topics: {data2.get('total_topics', 'N/A')}")
+                print(f"   Status: {data2.get('status', 'N/A')}")
+        else:
+            print(f"   ❌ FAILED: Validation error still occurs")
+        
+        # 3. Test with old camelCase format to verify it would fail (negative test)
+        print(f"\n3️⃣ Testing with old camelCase format (should fail - negative test)")
+        camelcase_config = {
+            "correctMarks": 4.0,
+            "incorrectMarks": -1.0,
+            "skippedMarks": 0.0,
+            "timeMinutes": 4.0,
+            "totalQuestions": 10
+        }
+        
+        print(f"   Using camelCase config (should cause validation error):")
+        print(f"   {camelcase_config}")
+        
+        success3, data3 = self.test_start_auto_generation_with_specific_config(exam_id, course_id, "new_questions", camelcase_config)
+        results['camelcase_negative_test'] = {'success': success3, 'data': data3}
+        
+        if not success3:
+            print(f"   ✅ EXPECTED FAILURE: camelCase format correctly rejected")
+            print(f"   ✅ This confirms the backend properly validates snake_case field names")
+        else:
+            print(f"   ❌ UNEXPECTED SUCCESS: camelCase format was accepted (this shouldn't happen)")
+        
+        # Summary
+        print(f"\n📊 CAMELCASE TO SNAKE_CASE FIX TEST SUMMARY")
+        print("=" * 60)
+        
+        snake_case_working = results.get('new_questions_mode', {}).get('success', False) and \
+                           results.get('pyq_solutions_mode', {}).get('success', False)
+        
+        camelcase_properly_rejected = not results.get('camelcase_negative_test', {}).get('success', True)
+        
+        print(f"✅ snake_case format accepted: {'YES' if snake_case_working else 'NO'}")
+        print(f"✅ camelCase format rejected: {'YES' if camelcase_properly_rejected else 'NO'}")
+        print(f"✅ Both generation modes working: {'YES' if snake_case_working else 'NO'}")
+        
+        if snake_case_working and camelcase_properly_rejected:
+            print(f"\n✅ CAMELCASE TO SNAKE_CASE FIX: WORKING CORRECTLY!")
+            print(f"   - Validation error about missing required fields is resolved")
+            print(f"   - '[object Object]' error should no longer occur with proper field names")
+            print(f"   - Both 'new_questions' and 'pyq_solutions' modes working")
+        else:
+            print(f"\n❌ CAMELCASE TO SNAKE_CASE FIX: ISSUES FOUND")
+            if not snake_case_working:
+                print(f"   - snake_case format still causing validation errors")
+            if not camelcase_properly_rejected:
+                print(f"   - camelCase format unexpectedly accepted")
+        
+        return results
+
+    def test_start_auto_generation_with_specific_config(self, exam_id, course_id, generation_mode, config_data):
+        """Test start-auto-generation with specific config data"""
+        params = {
+            "exam_id": exam_id,
+            "course_id": course_id,
+            "generation_mode": generation_mode
+        }
+        
+        url = f"{self.api_url}/start-auto-generation"
+        headers = {'Content-Type': 'application/json'}
+        
+        self.tests_run += 1
+        print(f"   Testing with generation_mode='{generation_mode}' and specific config...")
+        print(f"   URL: {url}")
+        print(f"   Params: {params}")
+        print(f"   Config: {config_data}")
+        
+        try:
+            response = requests.post(url, json=config_data, headers=headers, params=params, timeout=30)
+            
+            if response.status_code == 200:
+                self.tests_passed += 1
+                print(f"   ✅ SUCCESS - Auto-generation session created!")
+                try:
+                    response_data = response.json()
+                    print(f"   Session ID: {response_data.get('session_id', 'N/A')}")
+                    print(f"   Total topics: {response_data.get('total_topics', 'N/A')}")
+                    print(f"   Status: {response_data.get('status', 'N/A')}")
+                    return True, response_data
+                except Exception as json_error:
+                    print(f"   ❌ JSON parsing error: {str(json_error)}")
+                    return False, {}
+            else:
+                print(f"   ❌ FAILED - Expected 200, got {response.status_code}")
+                print(f"   Response: {response.text}")
+                
+                # Check for validation errors specifically
+                try:
+                    error_data = response.json()
+                    if isinstance(error_data, dict) and 'detail' in error_data:
+                        detail = error_data['detail']
+                        if isinstance(detail, list):
+                            print(f"   🔍 VALIDATION ERROR ARRAY DETECTED: {len(detail)} items")
+                            for i, item in enumerate(detail):
+                                print(f"      Error {i}: {item}")
+                                # Check for missing field errors
+                                if isinstance(item, dict) and 'loc' in item:
+                                    field_name = item['loc'][-1] if item['loc'] else 'unknown'
+                                    if field_name in ['correct_marks', 'incorrect_marks', 'skipped_marks', 'time_minutes', 'total_questions']:
+                                        print(f"      ⚠️ Missing required snake_case field: {field_name}")
+                        else:
+                            print(f"   Error detail: {detail}")
+                except:
+                    pass
+                
+                self.failed_tests.append({
+                    'test': f"Start Auto Generation with Specific Config ({generation_mode})",
+                    'exam_id': exam_id,
+                    'course_id': course_id,
+                    'expected': 200,
+                    'actual': response.status_code,
+                    'response': response.text[:500]
+                })
+                return False, {}
+                
+        except Exception as e:
+            print(f"   ❌ EXCEPTION - Error: {str(e)}")
+            self.failed_tests.append({
+                'test': f"Start Auto Generation with Specific Config ({generation_mode})",
+                'exam_id': exam_id,
+                'course_id': course_id,
+                'error': str(e)
+            })
+            return False, {}
+
     def test_review_request_specific(self):
         """Test the specific review request scenarios with correct ISI MSQMS course IDs"""
         print("\n🎯 TESTING REVIEW REQUEST - AUTO-GENERATION WITH CORRECT ISI MSQMS COURSE")

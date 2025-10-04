@@ -230,6 +230,9 @@ backend:
         - working: true
         - agent: "testing"
         - comment: "NEW ENDPOINT TESTED: POST /api/start-auto-generation working perfectly! Successfully created auto-generation session with session_id, 88 total topics, and 'ready_to_start' status. Accepts exam_id and course_id as query parameters, config as JSON body. Returns session details with total_topics and total_questions_planned. Integration with all-topics-with-weightage endpoint working correctly for session planning."
+        - working: true
+        - agent: "testing"
+        - comment: "CRITICAL ISSUE RESOLVED: '[object Object]' error investigation complete! ROOT CAUSE: FastAPI/Pydantic validation errors return as ARRAY in 'detail' field. When frontend displays this array directly, JavaScript converts it to '[object Object]'. Error occurs with: 1) Invalid UUID format for exam_id/course_id (500 error), 2) Missing required fields (422 error with validation array), 3) Invalid data types (422 error with validation array). SOLUTION: Frontend needs proper error handling for validation arrays. Endpoint works perfectly with valid UUID parameters. Tested with real exam_id='521d139b-8cf2-4b0f-afad-f4dc0c2c80e7' and course_id='85eb29d4-de89-4697-b041-646dbddb1b3a' - SUCCESS!"
 
 frontend:
   - task: "Question generation UI"

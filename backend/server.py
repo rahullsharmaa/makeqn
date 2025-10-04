@@ -1294,7 +1294,6 @@ Please respond in the following JSON format:
             # For MSQ, try to parse as JSON array if it's a string
             if isinstance(raw_answer, str):
                 try:
-                    import json
                     parsed_answer = json.loads(raw_answer)
                     if isinstance(parsed_answer, list):
                         answer = parsed_answer

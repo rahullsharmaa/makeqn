@@ -285,6 +285,31 @@ async def get_generated_questions(topic_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching generated questions: {str(e)}")
 
+# Model for updating question solutions
+class UpdateQuestionSolution(BaseModel):
+    question_id: str
+    answer: str 
+    solution: str
+    confidence_level: str
+
+@api_router.patch("/update-question-solution")
+async def update_question_solution(request: UpdateQuestionSolution):
+    """Update an existing question with generated solution"""
+    try:
+        # Update the question in questions_topic_wise table
+        result = supabase.table("questions_topic_wise").update({
+            "answer": request.answer,
+            "solution": request.solution,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }).eq("id", request.question_id).execute()
+        
+        if not result.data:
+            raise HTTPException(status_code=404, detail="Question not found")
+        
+        return {"message": "Question solution updated successfully", "question_id": request.question_id}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating question solution: {str(e)}")
 def validate_question_answer(question_type: str, options: List[str], answer: str) -> bool:
     """Validate that the question answer follows the rules"""
     if question_type == "MCQ":

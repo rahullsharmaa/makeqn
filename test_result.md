@@ -261,6 +261,18 @@ backend:
         - agent: "testing"
         - comment: "NEW ENDPOINT TESTED: PATCH /api/update-question-solution working perfectly! Successfully updates question solutions in both questions_topic_wise and new_questions tables. Fixed table lookup issue - now checks both tables to find questions. Tested with manually created question: successfully updated answer, solution, and confidence_level. Returns proper success message with question_id. Endpoint handles both existing PYQ questions and newly generated questions."
 
+  - task: "PYQ solution JSON schema fix"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: false
+        - agent: "testing"
+        - comment: "🎯 PYQ SOLUTION GENERATION INCONSISTENT: 33.3% success rate (1/3 attempts). Two attempts failed with 'Unterminated string starting at: line 3 column 15 (char 42)' JSON parsing error, while one attempt succeeded with proper JSON schema output. When successful, generates high-confidence solutions with proper answer format. The structured JSON output schema works but has intermittent parsing issues specific to PYQ solution generation. Need to investigate prompt complexity or response handling for PYQ solutions."
+
 frontend:
   - task: "Question generation UI"
     implemented: true

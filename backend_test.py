@@ -672,10 +672,14 @@ class QuestionMakerAPITester:
 
 def main():
     print("🚀 Testing Enhanced Question Generation System Backend...")
-    print("🎯 Focus: New API Endpoints + Enhanced Question Generation")
+    print("🎯 Focus: '[object Object]' Error Investigation")
     print("=" * 60)
     
     tester = QuestionMakerAPITester()
+    
+    # PRIORITY: Investigate the [object Object] error first
+    print("\n🔍 PRIORITY: Investigating '[object Object]' Error...")
+    tester.test_object_object_error_investigation()
     
     # Test basic connectivity first
     print("\n1️⃣ Testing Basic API Connectivity...")

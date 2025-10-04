@@ -119,7 +119,7 @@ backend:
 
   - task: "MCQ JSON parsing fix"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 2
     priority: "high"
@@ -140,6 +140,9 @@ backend:
         - working: false
         - agent: "testing"
         - comment: "INTERMITTENT ISSUE CONFIRMED: MCQ generation has 33.3% success rate (1/3 attempts successful). Mix of JSON parsing errors and validation failures. When successful, generates proper MCQ questions with correct format. MSQ generation is 100% reliable (3/3 success). Issue appears to be Gemini API inconsistency with MCQ prompts specifically. Recommend implementing retry logic or prompt optimization for MCQ generation to improve reliability."
+        - working: true
+        - agent: "testing"
+        - comment: "🎯 JSON SCHEMA IMPROVEMENTS SUCCESSFUL! MCQ generation now has 100% success rate (5/5 attempts) - MASSIVE improvement from previous 33.3%. All JSON responses are now valid and parseable with structured JSON output schema. Generated complex MCQ questions about Harmonic Progression with proper mathematical formatting, 4 options, correct answers, and detailed solutions. The 'Expecting property name enclosed in double quotes' errors are completely eliminated. JSON schema implementation is working perfectly for MCQ generation."
 
   - task: "NAT validation fix"
     implemented: true

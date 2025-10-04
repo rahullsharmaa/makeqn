@@ -287,11 +287,21 @@ function App() {
         if (typeof error.response.data === 'string') {
           errorMessage = error.response.data;
         } else if (error.response.data.detail) {
-          // Handle array of errors
+          // Handle FastAPI validation errors (arrays)
           if (Array.isArray(error.response.data.detail)) {
-            errorMessage = error.response.data.detail.map(err => 
-              typeof err === 'string' ? err : err.message || err.msg || JSON.stringify(err)
-            ).join(', ');
+            errorMessage = error.response.data.detail.map(err => {
+              if (typeof err === 'string') {
+                return err;
+              } else if (err.msg) {
+                // FastAPI Pydantic validation error format
+                const location = err.loc ? err.loc.join('.') : '';
+                return `${location}: ${err.msg}`;
+              } else if (err.message) {
+                return err.message;
+              } else {
+                return JSON.stringify(err);
+              }
+            }).join('; ');
           } else if (typeof error.response.data.detail === 'string') {
             errorMessage = error.response.data.detail;
           } else {

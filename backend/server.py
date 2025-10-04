@@ -569,8 +569,8 @@ Respond in the following JSON format:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating PYQ solution: {str(e)}")
 
-@api_router.post("/generate-pyq-solution", response_model=GeneratedSolution)
-async def generate_pyq_solution(request: PYQSolutionRequest):
+@api_router.post("/generate-pyq-solution-by-id", response_model=GeneratedSolution)
+async def generate_pyq_solution_by_id(request: PYQSolutionByIdRequest):
     """Generate solution for an existing PYQ question"""
     try:
         # Get the question details from questions_topic_wise table first

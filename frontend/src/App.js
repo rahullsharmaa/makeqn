@@ -320,7 +320,7 @@ function App() {
     }
   };
 
-  const processAutoGeneration = async (topics) => {
+  const processAutoGeneration = async (topics, questionType = "MCQ") => {
     let totalGenerated = 0;
     const totalQuestions = autoConfig.totalQuestions;
     

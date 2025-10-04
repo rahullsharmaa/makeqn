@@ -639,7 +639,17 @@ function App() {
           <div className="flex justify-center mt-4">
             <div className="text-center">
               <Button
-                onClick={() => setIsAutoMode(!isAutoMode)}
+                onClick={() => {
+                  const newAutoMode = !isAutoMode;
+                  setIsAutoMode(newAutoMode);
+                  if (newAutoMode && selectedCourse) {
+                    // Load topics preview when switching to auto mode
+                    loadTopicsPreview(selectedCourse);
+                  } else {
+                    // Clear topics preview when switching to manual mode
+                    setTopicsPreview([]);
+                  }
+                }}
                 variant={isAutoMode ? "default" : "outline"}
                 className={isAutoMode ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white" : ""}
               >

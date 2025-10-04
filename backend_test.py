@@ -1229,9 +1229,196 @@ class QuestionMakerAPITester:
             'targets_met': targets_met
         }
 
+    def test_object_object_error_specific(self):
+        """Test the specific '[object Object]' error scenarios from review request"""
+        print("\n🎯 TESTING SPECIFIC '[object Object]' ERROR SCENARIOS")
+        print("=" * 60)
+        print("Focus: /api/start-auto-generation endpoint with specific exam/course IDs")
+        print("Goal: Identify exact error causing '[object Object]' display in frontend")
+        
+        # Use the exact IDs from review request
+        exam_id = "521d139b-8cf2-4b0f-afad-f4dc0c2c80e7"
+        course_id = "85eb29d4-de89-4697-b041-646dbddb1b3a"  # ISI->MSQMS
+        
+        results = {
+            'valid_new_questions': None,
+            'valid_pyq_solutions': None,
+            'invalid_scenarios': []
+        }
+        
+        # Test 1: Valid request with generation_mode='new_questions'
+        print(f"\n1️⃣ Testing VALID request with generation_mode='new_questions'")
+        print(f"   exam_id: {exam_id}")
+        print(f"   course_id: {course_id} (ISI->MSQMS)")
+        
+        request_data = {
+            "correct_marks": 4.0,
+            "incorrect_marks": -1.0,
+            "skipped_marks": 0.0,
+            "time_minutes": 180.0,
+            "total_questions": 10
+        }
+        
+        params = {
+            "exam_id": exam_id,
+            "course_id": course_id,
+            "generation_mode": "new_questions"
+        }
+        
+        success, data = self.detailed_start_auto_generation_test(request_data, params, "new_questions")
+        results['valid_new_questions'] = {'success': success, 'data': data}
+        
+        # Test 2: Valid request with generation_mode='pyq_solutions'
+        print(f"\n2️⃣ Testing VALID request with generation_mode='pyq_solutions'")
+        
+        params['generation_mode'] = "pyq_solutions"
+        success, data = self.detailed_start_auto_generation_test(request_data, params, "pyq_solutions")
+        results['valid_pyq_solutions'] = {'success': success, 'data': data}
+        
+        # Test 3: Invalid scenarios that might cause '[object Object]' error
+        print(f"\n3️⃣ Testing INVALID scenarios that cause '[object Object]' error")
+        
+        invalid_scenarios = [
+            {
+                "name": "Invalid UUID format for exam_id",
+                "params": {"exam_id": "invalid-uuid", "course_id": course_id, "generation_mode": "new_questions"},
+                "data": request_data
+            },
+            {
+                "name": "Invalid UUID format for course_id", 
+                "params": {"exam_id": exam_id, "course_id": "invalid-uuid", "generation_mode": "new_questions"},
+                "data": request_data
+            },
+            {
+                "name": "Missing required fields in request body",
+                "params": {"exam_id": exam_id, "course_id": course_id, "generation_mode": "new_questions"},
+                "data": {}
+            },
+            {
+                "name": "Invalid data types in request body",
+                "params": {"exam_id": exam_id, "course_id": course_id, "generation_mode": "new_questions"},
+                "data": {
+                    "correct_marks": "invalid",
+                    "incorrect_marks": "invalid",
+                    "skipped_marks": "invalid",
+                    "time_minutes": "invalid",
+                    "total_questions": "invalid"
+                }
+            },
+            {
+                "name": "Missing query parameters",
+                "params": {},
+                "data": request_data
+            }
+        ]
+        
+        for i, scenario in enumerate(invalid_scenarios):
+            print(f"\n   Testing scenario {i+1}: {scenario['name']}")
+            success, data = self.detailed_start_auto_generation_test(scenario['data'], scenario['params'], scenario['name'])
+            results['invalid_scenarios'].append({
+                'name': scenario['name'],
+                'success': success,
+                'data': data
+            })
+        
+        return results
+
+    def detailed_start_auto_generation_test(self, request_data, params, test_name):
+        """Detailed test of start-auto-generation endpoint with error analysis"""
+        url = f"{self.api_url}/start-auto-generation"
+        headers = {'Content-Type': 'application/json'}
+        
+        self.tests_run += 1
+        print(f"   URL: {url}")
+        print(f"   Params: {json.dumps(params, indent=6)}")
+        print(f"   Body: {json.dumps(request_data, indent=6)}")
+        
+        try:
+            response = requests.post(url, json=request_data, headers=headers, params=params, timeout=30)
+            
+            print(f"   Status Code: {response.status_code}")
+            print(f"   Response Headers: {dict(response.headers)}")
+            
+            if response.status_code == 200:
+                self.tests_passed += 1
+                print(f"   ✅ SUCCESS - Auto-generation session created!")
+                try:
+                    response_data = response.json()
+                    print(f"   Response Structure:")
+                    print(f"      session_id: {response_data.get('session_id', 'N/A')}")
+                    print(f"      total_topics: {response_data.get('total_topics', 'N/A')}")
+                    print(f"      total_questions_planned: {response_data.get('total_questions_planned', 'N/A')}")
+                    print(f"      status: {response_data.get('status', 'N/A')}")
+                    print(f"      message: {response_data.get('message', 'N/A')}")
+                    return True, response_data
+                except Exception as json_error:
+                    print(f"   ❌ JSON parsing error: {str(json_error)}")
+                    print(f"   Raw response: {response.text}")
+                    return False, {}
+            else:
+                print(f"   ❌ FAILED - Expected 200, got {response.status_code}")
+                print(f"   Raw Response: {response.text}")
+                
+                # Detailed error analysis for '[object Object]' investigation
+                try:
+                    error_data = response.json()
+                    print(f"   📊 ERROR ANALYSIS:")
+                    print(f"      Error Type: {type(error_data).__name__}")
+                    
+                    if isinstance(error_data, list):
+                        print(f"      🚨 ERROR IS AN ARRAY with {len(error_data)} items")
+                        print(f"      🔍 This would cause '[object Object]' in frontend!")
+                        for i, item in enumerate(error_data):
+                            print(f"         Item {i}: {item}")
+                    elif isinstance(error_data, dict):
+                        print(f"      Error is an object with keys: {list(error_data.keys())}")
+                        if 'detail' in error_data:
+                            detail = error_data['detail']
+                            print(f"      Detail Type: {type(detail).__name__}")
+                            if isinstance(detail, list):
+                                print(f"      🚨 DETAIL IS AN ARRAY with {len(detail)} items")
+                                print(f"      🔍 This would cause '[object Object]' in frontend!")
+                                for i, item in enumerate(detail):
+                                    print(f"         Detail {i}: {json.dumps(item, indent=10)}")
+                            else:
+                                print(f"      Detail: {detail}")
+                        else:
+                            print(f"      Full error object: {json.dumps(error_data, indent=6)}")
+                    
+                    # Check for FastAPI/Pydantic validation errors
+                    if response.status_code == 422:
+                        print(f"      🔍 422 VALIDATION ERROR DETECTED")
+                        print(f"      This is likely a Pydantic validation error array")
+                        print(f"      Frontend should handle validation error arrays properly")
+                    elif response.status_code == 500:
+                        print(f"      🔍 500 INTERNAL SERVER ERROR")
+                        print(f"      This might be UUID validation or database error")
+                    
+                except Exception as parse_error:
+                    print(f"   ❌ Could not parse error response: {parse_error}")
+                    print(f"   This might be non-JSON error response")
+                
+                self.failed_tests.append({
+                    'test': f"Start Auto Generation - {test_name}",
+                    'expected': 200,
+                    'actual': response.status_code,
+                    'response': response.text[:500],
+                    'params': params
+                })
+                return False, {'error_response': response.text, 'status_code': response.status_code}
+                
+        except Exception as e:
+            print(f"   ❌ EXCEPTION - Error: {str(e)}")
+            self.failed_tests.append({
+                'test': f"Start Auto Generation - {test_name}",
+                'error': str(e),
+                'params': params
+            })
+            return False, {'exception': str(e)}
+
 def main():
-    print("🚀 Testing JSON Schema Improvements for Question Generation")
-    print("🎯 Focus: Review Request - JSON Schema & Parsing Improvements")
+    print("🚀 Testing '[object Object]' Error Investigation")
+    print("🎯 Focus: Review Request - Auto-Generation Endpoint Error Analysis")
     print("=" * 60)
     
     tester = QuestionMakerAPITester()
@@ -1240,57 +1427,85 @@ def main():
     print("\n1️⃣ Testing Basic API Connectivity...")
     tester.test_root_endpoint()
     
-    # Run the specific JSON schema improvement tests
-    print("\n2️⃣ Running JSON Schema Improvement Tests...")
-    schema_results = tester.test_json_schema_improvements()
+    # Run the specific '[object Object]' error investigation
+    print("\n2️⃣ Running '[object Object]' Error Investigation...")
+    object_error_results = tester.test_object_object_error_specific()
     
-    # Analyze the results
-    print("\n3️⃣ Analyzing JSON Schema Test Results...")
-    analysis = tester.analyze_json_schema_results(schema_results)
-    
-    # Print summary
+    # Print detailed analysis
     print("\n" + "=" * 60)
-    print("📊 FINAL TEST SUMMARY")
+    print("📊 '[object Object]' ERROR INVESTIGATION RESULTS")
     print("=" * 60)
-    print(f"Total Tests Run: {tester.tests_run}")
-    print(f"Tests Passed: {tester.tests_passed}")
-    print(f"Tests Failed: {len(tester.failed_tests)}")
-    print(f"Success Rate: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
     
-    # Key findings
-    print(f"\n🔑 KEY FINDINGS:")
-    print(f"   MCQ Generation: {analysis['mcq_success_rate']:.1f}% success rate")
-    print(f"   NAT Generation: {analysis['nat_success_rate']:.1f}% success rate")
-    print(f"   MSQ Generation: {analysis['msq_success_rate']:.1f}% success rate")
-    print(f"   Overall JSON Parsing: {analysis['overall_success_rate']:.1f}% success rate")
-    print(f"   Targets Met: {analysis['targets_met']}/4")
+    # Analyze valid scenarios
+    print(f"\n✅ VALID SCENARIOS:")
+    if object_error_results['valid_new_questions']['success']:
+        print(f"   generation_mode='new_questions': ✅ SUCCESS")
+        data = object_error_results['valid_new_questions']['data']
+        print(f"      Session ID: {data.get('session_id', 'N/A')}")
+        print(f"      Total Topics: {data.get('total_topics', 'N/A')}")
+        print(f"      Status: {data.get('status', 'N/A')}")
+    else:
+        print(f"   generation_mode='new_questions': ❌ FAILED")
+        
+    if object_error_results['valid_pyq_solutions']['success']:
+        print(f"   generation_mode='pyq_solutions': ✅ SUCCESS")
+        data = object_error_results['valid_pyq_solutions']['data']
+        print(f"      Session ID: {data.get('session_id', 'N/A')}")
+        print(f"      Total Topics: {data.get('total_topics', 'N/A')}")
+        print(f"      Status: {data.get('status', 'N/A')}")
+    else:
+        print(f"   generation_mode='pyq_solutions': ❌ FAILED")
     
-    # Detailed failure analysis if needed
-    if tester.failed_tests:
-        print("\n❌ DETAILED FAILURE ANALYSIS:")
-        json_parsing_errors = 0
-        other_errors = 0
-        
-        for failure in tester.failed_tests:
-            if 'response' in failure and ('json' in failure['response'].lower() or 'parsing' in failure['response'].lower()):
-                json_parsing_errors += 1
-            else:
-                other_errors += 1
-        
-        print(f"   JSON Parsing Errors: {json_parsing_errors}")
-        print(f"   Other Errors: {other_errors}")
-        
-        # Show sample errors
-        for i, failure in enumerate(tester.failed_tests[:3]):  # Show first 3 failures
-            print(f"\n  🔍 Sample Failure {i+1}:")
-            print(f"     Test: {failure.get('test', 'Unknown')}")
-            if 'error' in failure:
-                print(f"     Error: {failure['error']}")
-            if 'response' in failure:
-                print(f"     Response: {failure['response'][:150]}...")
+    # Analyze invalid scenarios that cause '[object Object]'
+    print(f"\n❌ INVALID SCENARIOS (causing '[object Object]'):")
+    object_object_causes = []
     
-    # Return appropriate exit code
-    return 0 if analysis['targets_met'] >= 3 else 1
+    for scenario in object_error_results['invalid_scenarios']:
+        print(f"   {scenario['name']}: {'✅ HANDLED' if scenario['success'] else '❌ CAUSES ERROR'}")
+        if not scenario['success'] and 'error_response' in scenario['data']:
+            # Check if this would cause '[object Object]' in frontend
+            try:
+                import json
+                error_data = json.loads(scenario['data']['error_response'])
+                if isinstance(error_data, list) or (isinstance(error_data, dict) and isinstance(error_data.get('detail'), list)):
+                    object_object_causes.append(scenario['name'])
+                    print(f"      🚨 This would display '[object Object]' in frontend!")
+            except:
+                pass
+    
+    # Summary and recommendations
+    print(f"\n🎯 ROOT CAUSE ANALYSIS:")
+    if object_object_causes:
+        print(f"   '[object Object]' is caused by: {len(object_object_causes)} scenarios")
+        for cause in object_object_causes:
+            print(f"      - {cause}")
+        print(f"\n   💡 SOLUTION: Frontend needs to handle validation error arrays properly")
+        print(f"      When FastAPI returns validation errors, they come as arrays in 'detail' field")
+        print(f"      JavaScript displays arrays as '[object Object]' when converted to string")
+        print(f"      Frontend should iterate through error arrays and display individual messages")
+    else:
+        print(f"   No '[object Object]' errors detected in current tests")
+    
+    # Print final summary
+    print(f"\n📊 FINAL TEST SUMMARY:")
+    print(f"   Total Tests Run: {tester.tests_run}")
+    print(f"   Tests Passed: {tester.tests_passed}")
+    print(f"   Tests Failed: {len(tester.failed_tests)}")
+    print(f"   Success Rate: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
+    
+    # Conclusion
+    valid_scenarios_working = (object_error_results['valid_new_questions']['success'] and 
+                              object_error_results['valid_pyq_solutions']['success'])
+    
+    if valid_scenarios_working:
+        print(f"\n✅ CONCLUSION: Auto-generation endpoint works correctly with valid parameters")
+        print(f"   '[object Object]' error only occurs with invalid input validation")
+        print(f"   Frontend should implement proper error handling for validation arrays")
+    else:
+        print(f"\n❌ CONCLUSION: Auto-generation endpoint has issues even with valid parameters")
+        print(f"   Need to investigate backend implementation further")
+    
+    return 0 if valid_scenarios_working else 1
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -183,7 +183,17 @@ class PYQSolutionRequest(BaseModel):
     options: Optional[List[str]] = None
     question_type: str
 
+class PYQSolutionByIdRequest(BaseModel):
+    question_id: str
+
 class PYQSolutionResponse(BaseModel):
+    question_statement: str
+    answer: str
+    solution: str
+    confidence_level: str
+
+class GeneratedSolution(BaseModel):
+    question_id: str
     question_statement: str
     answer: str
     solution: str

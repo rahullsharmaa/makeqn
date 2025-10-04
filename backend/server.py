@@ -1267,9 +1267,27 @@ Please respond in the following JSON format:
         if not isinstance(generated_data, dict):
             raise HTTPException(status_code=500, detail=f"AI response is not a valid object. Got: {type(generated_data)}")
         
-        # Validate the generated question
+        # Process and validate the generated question
         options = generated_data.get("options", [])
-        answer = generated_data.get("answer", "")
+        raw_answer = generated_data.get("answer", "")
+        
+        # Process answer format based on question type
+        if request.question_type == "MSQ":
+            # For MSQ, try to parse as JSON array if it's a string
+            if isinstance(raw_answer, str):
+                try:
+                    import json
+                    parsed_answer = json.loads(raw_answer)
+                    if isinstance(parsed_answer, list):
+                        answer = parsed_answer
+                    else:
+                        answer = raw_answer
+                except (json.JSONDecodeError, ValueError):
+                    answer = raw_answer
+            else:
+                answer = raw_answer
+        else:
+            answer = raw_answer
         
         if not validate_question_answer(request.question_type, options, answer):
             raise HTTPException(status_code=400, detail=f"Generated question doesn't meet {request.question_type} validation rules")

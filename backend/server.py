@@ -1125,21 +1125,36 @@ Context from existing questions (DO NOT COPY, use for inspiration only):
 Previously generated questions in this topic (AVOID similar content - generate something completely different):
 {json.dumps([q['question_statement'] for q in generated_questions.data], indent=2)}
 
+FORMATTING REQUIREMENTS:
+1. Use KaTeX/LaTeX syntax for all mathematical expressions:
+   - For inline math: $x^2 + y^2 = z^2$
+   - For display math: $$\\frac{{a}}{{b}} = \\frac{{c}}{{d}}$$
+   - Use proper LaTeX commands: \\frac, \\sqrt, \\int, \\sum, \\lim, etc.
+2. Both question_statement and solution must use proper LaTeX formatting for math
+3. All mathematical symbols, formulas, and equations must be in LaTeX syntax
+4. Options should also use LaTeX formatting for any mathematical content
+
+ANSWER FORMAT REQUIREMENTS:
+- MCQ: Provide the complete correct option text (e.g., "Option A text here")
+- MSQ: Provide array of complete correct option texts (e.g., ["Option A text", "Option C text"])
+- NAT: Provide the numerical answer as a number
+- SUB: Provide the complete descriptive answer
+
 Requirements:
 1. Generate a FRESH, ORIGINAL question that tests understanding of the topic
 2. Make it educationally valuable and appropriately challenging for {exam.get('name', 'the exam')}
 3. Ensure difficulty is suitable for {course.get('name', 'the course')} level
 4. For MCQ/MSQ: Provide exactly 4 options with realistic distractors
-5. Ensure the answer follows the question type rules strictly
-6. Provide a detailed solution explanation with clear steps
+5. Format ALL mathematical content using proper LaTeX syntax
+6. Provide a detailed solution explanation with clear steps in LaTeX format
 7. AVOID any similarity with previously generated questions listed above
 
 Please respond in the following JSON format:
 {{
-    "question_statement": "Your question here",
-    "options": ["Option 1", "Option 2", "Option 3", "Option 4"] or null for NAT/SUB,
-    "answer": "For MCQ: single number (0-3), for MSQ: comma-separated numbers (0,1,2), for NAT: numerical value, for SUB: descriptive answer",
-    "solution": "Detailed step-by-step solution",
+    "question_statement": "Your question here with proper LaTeX formatting",
+    "options": ["Option 1 with LaTeX if needed", "Option 2 with LaTeX if needed", "Option 3 with LaTeX if needed", "Option 4 with LaTeX if needed"] or null for NAT/SUB,
+    "answer": "Complete option text for MCQ, array of option texts for MSQ, numerical value for NAT, or descriptive answer for SUB",
+    "solution": "Detailed step-by-step solution with LaTeX formatting",
     "difficulty_level": "Easy/Medium/Hard"
 }}
 """

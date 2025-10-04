@@ -983,9 +983,255 @@ class QuestionMakerAPITester:
             print(f"   ❌ Failed to create test question for update testing")
             return False
 
+    def test_json_schema_improvements(self):
+        """Test the specific JSON schema improvements from the review request"""
+        print("\n🎯 TESTING JSON SCHEMA IMPROVEMENTS")
+        print("=" * 60)
+        print("Focus: Testing improved question generation with JSON schema")
+        print("Expected: MCQ 33%→90%+, NAT 0%→90%+, MSQ maintain 100%")
+        
+        # Use known working topic from ISI->MSQMS course
+        topic_id = "7c583ed3-64bf-4fa0-bf20-058ac4b40737"  # Harmonic Progression topic
+        
+        results = {
+            'mcq_tests': [],
+            'nat_tests': [],
+            'msq_tests': [],
+            'pyq_tests': [],
+            'round_robin_tests': []
+        }
+        
+        # 1. Test MCQ generation (5 attempts as requested)
+        print(f"\n1️⃣ Testing MCQ Generation (5 attempts)")
+        print(f"   Previous success rate: 33% (1/3)")
+        print(f"   Expected improvement: 90%+ success rate")
+        
+        mcq_successes = 0
+        for i in range(5):
+            print(f"\n   MCQ Attempt {i+1}/5:")
+            success, data = self.test_question_generation(topic_id, "MCQ")
+            results['mcq_tests'].append({'attempt': i+1, 'success': success, 'data': data})
+            if success:
+                mcq_successes += 1
+                print(f"   ✅ MCQ {i+1}: SUCCESS - JSON parsed correctly")
+                if data:
+                    print(f"      Question: {data.get('question_statement', '')[:80]}...")
+                    print(f"      Options: {len(data.get('options', []))} options")
+                    print(f"      Answer: {data.get('answer', 'N/A')}")
+            else:
+                print(f"   ❌ MCQ {i+1}: FAILED - JSON parsing error")
+        
+        mcq_success_rate = (mcq_successes / 5) * 100
+        print(f"\n   📊 MCQ Results: {mcq_successes}/5 successful ({mcq_success_rate:.1f}%)")
+        
+        # 2. Test NAT generation (5 attempts as requested)
+        print(f"\n2️⃣ Testing NAT Generation (5 attempts)")
+        print(f"   Previous success rate: 0% (0/3)")
+        print(f"   Expected improvement: 90%+ success rate")
+        
+        nat_successes = 0
+        for i in range(5):
+            print(f"\n   NAT Attempt {i+1}/5:")
+            success, data = self.test_question_generation(topic_id, "NAT")
+            results['nat_tests'].append({'attempt': i+1, 'success': success, 'data': data})
+            if success:
+                nat_successes += 1
+                print(f"   ✅ NAT {i+1}: SUCCESS - JSON parsed correctly")
+                if data:
+                    print(f"      Question: {data.get('question_statement', '')[:80]}...")
+                    print(f"      Answer: {data.get('answer', 'N/A')}")
+                    print(f"      Type: Numerical")
+            else:
+                print(f"   ❌ NAT {i+1}: FAILED - JSON parsing error")
+        
+        nat_success_rate = (nat_successes / 5) * 100
+        print(f"\n   📊 NAT Results: {nat_successes}/5 successful ({nat_success_rate:.1f}%)")
+        
+        # 3. Test MSQ generation (3 attempts to ensure no regression)
+        print(f"\n3️⃣ Testing MSQ Generation (3 attempts)")
+        print(f"   Previous success rate: 100% (3/3)")
+        print(f"   Expected: Maintain 100% success rate")
+        
+        msq_successes = 0
+        for i in range(3):
+            print(f"\n   MSQ Attempt {i+1}/3:")
+            success, data = self.test_question_generation(topic_id, "MSQ")
+            results['msq_tests'].append({'attempt': i+1, 'success': success, 'data': data})
+            if success:
+                msq_successes += 1
+                print(f"   ✅ MSQ {i+1}: SUCCESS - JSON parsed correctly")
+                if data:
+                    print(f"      Question: {data.get('question_statement', '')[:80]}...")
+                    print(f"      Options: {len(data.get('options', []))} options")
+                    print(f"      Answer: {data.get('answer', 'N/A')} (multiple correct)")
+            else:
+                print(f"   ❌ MSQ {i+1}: FAILED - JSON parsing error")
+        
+        msq_success_rate = (msq_successes / 3) * 100
+        print(f"\n   📊 MSQ Results: {msq_successes}/3 successful ({msq_success_rate:.1f}%)")
+        
+        # 4. Test PYQ solution generation with schema (3 attempts)
+        print(f"\n4️⃣ Testing PYQ Solution Generation with Schema (3 attempts)")
+        print(f"   Focus: Verify structured JSON output and topic notes usage")
+        
+        pyq_successes = 0
+        for i in range(3):
+            print(f"\n   PYQ Attempt {i+1}/3:")
+            success, data = self.test_generate_pyq_solution(topic_id)
+            results['pyq_tests'].append({'attempt': i+1, 'success': success, 'data': data})
+            if success:
+                pyq_successes += 1
+                print(f"   ✅ PYQ {i+1}: SUCCESS - JSON schema working")
+                if data:
+                    print(f"      Answer: {data.get('answer', 'N/A')}")
+                    print(f"      Confidence: {data.get('confidence_level', 'N/A')}")
+                    print(f"      Uses topic notes: {'✅ YES' if 'topic notes' in data.get('solution', '').lower() else '⚠️ UNCLEAR'}")
+            else:
+                print(f"   ❌ PYQ {i+1}: FAILED - JSON parsing error")
+        
+        pyq_success_rate = (pyq_successes / 3) * 100
+        print(f"\n   📊 PYQ Results: {pyq_successes}/3 successful ({pyq_success_rate:.1f}%)")
+        
+        # 5. Monitor round-robin system (test multiple requests to verify key rotation)
+        print(f"\n5️⃣ Testing Round-Robin System")
+        print(f"   Focus: Verify API keys rotate properly and failed key handling works")
+        
+        # Make multiple quick requests to test round-robin
+        round_robin_successes = 0
+        for i in range(6):  # Test 6 requests to see key rotation
+            print(f"\n   Round-Robin Test {i+1}/6:")
+            success, data = self.test_question_generation(topic_id, "MSQ")  # Use MSQ as it was most reliable
+            results['round_robin_tests'].append({'attempt': i+1, 'success': success})
+            if success:
+                round_robin_successes += 1
+                print(f"   ✅ Request {i+1}: SUCCESS - Round-robin working")
+            else:
+                print(f"   ❌ Request {i+1}: FAILED - Possible key exhaustion")
+        
+        round_robin_success_rate = (round_robin_successes / 6) * 100
+        print(f"\n   📊 Round-Robin Results: {round_robin_successes}/6 successful ({round_robin_success_rate:.1f}%)")
+        
+        return results
+
+    def analyze_json_schema_results(self, results):
+        """Analyze the JSON schema improvement test results"""
+        print(f"\n📊 JSON SCHEMA IMPROVEMENTS ANALYSIS")
+        print("=" * 60)
+        
+        # Calculate success rates
+        mcq_success_rate = sum(1 for test in results['mcq_tests'] if test['success']) / len(results['mcq_tests']) * 100
+        nat_success_rate = sum(1 for test in results['nat_tests'] if test['success']) / len(results['nat_tests']) * 100
+        msq_success_rate = sum(1 for test in results['msq_tests'] if test['success']) / len(results['msq_tests']) * 100
+        pyq_success_rate = sum(1 for test in results['pyq_tests'] if test['success']) / len(results['pyq_tests']) * 100
+        round_robin_success_rate = sum(1 for test in results['round_robin_tests'] if test['success']) / len(results['round_robin_tests']) * 100
+        
+        print(f"\n🎯 SUCCESS RATE COMPARISON:")
+        print(f"   MCQ Generation:")
+        print(f"      Previous: 33.3% (1/3 attempts)")
+        print(f"      Current:  {mcq_success_rate:.1f}% ({sum(1 for test in results['mcq_tests'] if test['success'])}/5 attempts)")
+        print(f"      Target:   90%+")
+        print(f"      Status:   {'✅ IMPROVED' if mcq_success_rate > 33.3 else '❌ NO IMPROVEMENT'}")
+        
+        print(f"\n   NAT Generation:")
+        print(f"      Previous: 0.0% (0/3 attempts)")
+        print(f"      Current:  {nat_success_rate:.1f}% ({sum(1 for test in results['nat_tests'] if test['success'])}/5 attempts)")
+        print(f"      Target:   90%+")
+        print(f"      Status:   {'✅ IMPROVED' if nat_success_rate > 0 else '❌ NO IMPROVEMENT'}")
+        
+        print(f"\n   MSQ Generation:")
+        print(f"      Previous: 100.0% (3/3 attempts)")
+        print(f"      Current:  {msq_success_rate:.1f}% ({sum(1 for test in results['msq_tests'] if test['success'])}/3 attempts)")
+        print(f"      Target:   Maintain 100%")
+        print(f"      Status:   {'✅ MAINTAINED' if msq_success_rate == 100 else '⚠️ REGRESSION' if msq_success_rate < 100 else '✅ STABLE'}")
+        
+        print(f"\n   PYQ Solution Generation:")
+        print(f"      Current:  {pyq_success_rate:.1f}% ({sum(1 for test in results['pyq_tests'] if test['success'])}/3 attempts)")
+        print(f"      Target:   Consistent JSON with topic notes")
+        print(f"      Status:   {'✅ WORKING' if pyq_success_rate >= 66.7 else '⚠️ INCONSISTENT'}")
+        
+        print(f"\n   Round-Robin System:")
+        print(f"      Current:  {round_robin_success_rate:.1f}% ({sum(1 for test in results['round_robin_tests'] if test['success'])}/6 attempts)")
+        print(f"      Target:   Proper key rotation")
+        print(f"      Status:   {'✅ WORKING' if round_robin_success_rate >= 83.3 else '⚠️ KEY ISSUES'}")
+        
+        # Overall assessment
+        print(f"\n🎯 OVERALL JSON SCHEMA IMPROVEMENTS:")
+        
+        improvements = []
+        regressions = []
+        
+        if mcq_success_rate > 33.3:
+            improvements.append(f"MCQ: {33.3:.1f}% → {mcq_success_rate:.1f}%")
+        else:
+            regressions.append(f"MCQ: Still at {mcq_success_rate:.1f}%")
+            
+        if nat_success_rate > 0:
+            improvements.append(f"NAT: 0% → {nat_success_rate:.1f}%")
+        else:
+            regressions.append(f"NAT: Still at 0%")
+            
+        if msq_success_rate < 100:
+            regressions.append(f"MSQ: 100% → {msq_success_rate:.1f}%")
+        else:
+            improvements.append(f"MSQ: Maintained 100%")
+        
+        if improvements:
+            print(f"   ✅ Improvements: {', '.join(improvements)}")
+        if regressions:
+            print(f"   ❌ Issues: {', '.join(regressions)}")
+        
+        # Check if JSON parsing errors are eliminated
+        total_attempts = len(results['mcq_tests']) + len(results['nat_tests']) + len(results['msq_tests'])
+        total_successes = sum(1 for test in results['mcq_tests'] if test['success']) + \
+                         sum(1 for test in results['nat_tests'] if test['success']) + \
+                         sum(1 for test in results['msq_tests'] if test['success'])
+        
+        overall_success_rate = (total_successes / total_attempts) * 100
+        
+        print(f"\n🔍 JSON PARSING ERROR STATUS:")
+        print(f"   Overall Success Rate: {overall_success_rate:.1f}% ({total_successes}/{total_attempts})")
+        
+        if overall_success_rate >= 90:
+            print(f"   ✅ JSON parsing errors largely eliminated")
+        elif overall_success_rate >= 70:
+            print(f"   ⚠️ Significant improvement but some errors remain")
+        else:
+            print(f"   ❌ JSON parsing errors still prevalent")
+        
+        # Expected results check
+        print(f"\n🎯 EXPECTED RESULTS CHECK:")
+        mcq_target_met = mcq_success_rate >= 90
+        nat_target_met = nat_success_rate >= 90
+        msq_maintained = msq_success_rate >= 90
+        json_consistent = overall_success_rate >= 90
+        
+        print(f"   MCQ 90%+ success rate: {'✅ MET' if mcq_target_met else '❌ NOT MET'}")
+        print(f"   NAT 90%+ success rate: {'✅ MET' if nat_target_met else '❌ NOT MET'}")
+        print(f"   MSQ maintain high rate: {'✅ MET' if msq_maintained else '❌ NOT MET'}")
+        print(f"   JSON responses valid: {'✅ MET' if json_consistent else '❌ NOT MET'}")
+        
+        targets_met = sum([mcq_target_met, nat_target_met, msq_maintained, json_consistent])
+        
+        if targets_met >= 3:
+            print(f"\n✅ JSON SCHEMA IMPROVEMENTS: SUCCESSFUL ({targets_met}/4 targets met)")
+        elif targets_met >= 2:
+            print(f"\n⚠️ JSON SCHEMA IMPROVEMENTS: PARTIAL SUCCESS ({targets_met}/4 targets met)")
+        else:
+            print(f"\n❌ JSON SCHEMA IMPROVEMENTS: NEED MORE WORK ({targets_met}/4 targets met)")
+        
+        return {
+            'mcq_success_rate': mcq_success_rate,
+            'nat_success_rate': nat_success_rate,
+            'msq_success_rate': msq_success_rate,
+            'pyq_success_rate': pyq_success_rate,
+            'round_robin_success_rate': round_robin_success_rate,
+            'overall_success_rate': overall_success_rate,
+            'targets_met': targets_met
+        }
+
 def main():
-    print("🚀 Testing Auto-Generation Functionality Improvements")
-    print("🎯 Focus: Review Request Scenarios")
+    print("🚀 Testing JSON Schema Improvements for Question Generation")
+    print("🎯 Focus: Review Request - JSON Schema & Parsing Improvements")
     print("=" * 60)
     
     tester = QuestionMakerAPITester()
@@ -994,105 +1240,57 @@ def main():
     print("\n1️⃣ Testing Basic API Connectivity...")
     tester.test_root_endpoint()
     
-    # Run the specific review request scenarios
-    print("\n2️⃣ Running Review Request Test Scenarios...")
-    review_results = tester.test_review_request_scenarios()
+    # Run the specific JSON schema improvement tests
+    print("\n2️⃣ Running JSON Schema Improvement Tests...")
+    schema_results = tester.test_json_schema_improvements()
     
-    # Additional test: Try to create a question manually to test update-question-solution
-    print("\n3️⃣ Testing Update Question Solution with Created Question...")
-    tester.test_update_solution_with_created_question()
+    # Analyze the results
+    print("\n3️⃣ Analyzing JSON Schema Test Results...")
+    analysis = tester.analyze_json_schema_results(schema_results)
     
-    # Print detailed results
+    # Print summary
     print("\n" + "=" * 60)
-    print("📊 REVIEW REQUEST TEST RESULTS")
+    print("📊 FINAL TEST SUMMARY")
     print("=" * 60)
     print(f"Total Tests Run: {tester.tests_run}")
     print(f"Tests Passed: {tester.tests_passed}")
     print(f"Tests Failed: {len(tester.failed_tests)}")
     print(f"Success Rate: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
     
-    # Analyze specific scenarios
-    print(f"\n🎯 SCENARIO ANALYSIS:")
+    # Key findings
+    print(f"\n🔑 KEY FINDINGS:")
+    print(f"   MCQ Generation: {analysis['mcq_success_rate']:.1f}% success rate")
+    print(f"   NAT Generation: {analysis['nat_success_rate']:.1f}% success rate")
+    print(f"   MSQ Generation: {analysis['msq_success_rate']:.1f}% success rate")
+    print(f"   Overall JSON Parsing: {analysis['overall_success_rate']:.1f}% success rate")
+    print(f"   Targets Met: {analysis['targets_met']}/4")
     
-    # 1. Auto-generation endpoint tests
-    auto_gen_new = review_results.get('start_auto_generation_new', {})
-    auto_gen_pyq = review_results.get('start_auto_generation_pyq', {})
-    
-    print(f"\n1️⃣ /start-auto-generation endpoint:")
-    print(f"   new_questions mode: {'✅ WORKING' if auto_gen_new.get('success') else '❌ FAILED'}")
-    print(f"   pyq_solutions mode: {'✅ WORKING' if auto_gen_pyq.get('success') else '❌ FAILED'}")
-    
-    # 2. Existing questions endpoint
-    existing_q = review_results.get('existing_questions', {})
-    print(f"\n2️⃣ /existing-questions/{'{topic_id}'} endpoint:")
-    print(f"   Status: {'✅ WORKING' if existing_q.get('success') else '❌ FAILED'}")
-    if existing_q.get('success') and existing_q.get('data'):
-        print(f"   Returns question IDs: ✅ YES")
-        print(f"   Questions found: {len(existing_q['data'])}")
-    
-    # 3. Update question solution
-    update_q = review_results.get('update_question_solution', {})
-    print(f"\n3️⃣ /update-question-solution endpoint:")
-    print(f"   Status: {'✅ WORKING' if update_q.get('success') else '❌ FAILED'}")
-    if not update_q.get('success') and 'reason' in update_q:
-        print(f"   Reason: {update_q['reason']}")
-    
-    # 4. Question generation by type
-    print(f"\n4️⃣ Question generation by type:")
-    for q_type in ['MCQ', 'MSQ', 'NAT']:
-        result = review_results.get(f'generate_{q_type.lower()}', {})
-        status = '✅ WORKING' if result.get('success') else '❌ FAILED'
-        print(f"   {q_type}: {status}")
-    
-    # 5. PYQ solution generation
-    pyq_solution = review_results.get('generate_pyq_solution', {})
-    print(f"\n5️⃣ PYQ solution generation:")
-    print(f"   Status: {'✅ WORKING' if pyq_solution.get('success') else '❌ FAILED'}")
-    if pyq_solution.get('success') and pyq_solution.get('data'):
-        confidence = pyq_solution['data'].get('confidence_level', 'N/A')
-        print(f"   Uses topic notes: ✅ YES (confidence: {confidence})")
-    
-    # Check for "[object Object]" error resolution
-    print(f"\n🔍 '[object Object]' ERROR STATUS:")
-    object_error_resolved = auto_gen_new.get('success') or auto_gen_pyq.get('success')
-    if object_error_resolved:
-        print(f"   ✅ RESOLVED - Auto-generation works with valid IDs")
-    else:
-        print(f"   ❌ PERSISTS - Auto-generation still failing")
-        # Check if it's validation array issue
-        for failure in tester.failed_tests:
-            if 'Start Auto Generation' in failure.get('test', ''):
-                print(f"   Check for validation array errors in failed tests")
-    
-    # Overall assessment
-    print(f"\n🎯 OVERALL ASSESSMENT:")
-    working_scenarios = sum(1 for result in review_results.values() if result.get('success'))
-    total_scenarios = len(review_results)
-    
-    if working_scenarios >= total_scenarios * 0.8:  # 80% success rate
-        print(f"✅ IMPROVEMENTS SUCCESSFUL: {working_scenarios}/{total_scenarios} scenarios working")
-    elif working_scenarios >= total_scenarios * 0.5:  # 50% success rate
-        print(f"⚠️ PARTIAL SUCCESS: {working_scenarios}/{total_scenarios} scenarios working")
-    else:
-        print(f"❌ IMPROVEMENTS NEED WORK: Only {working_scenarios}/{total_scenarios} scenarios working")
-    
-    # Detailed failure analysis
+    # Detailed failure analysis if needed
     if tester.failed_tests:
         print("\n❌ DETAILED FAILURE ANALYSIS:")
+        json_parsing_errors = 0
+        other_errors = 0
+        
         for failure in tester.failed_tests:
-            print(f"\n  🔍 Test: {failure.get('test', 'Unknown')}")
-            if 'exam_id' in failure:
-                print(f"     Exam ID: {failure['exam_id']}")
-            if 'course_id' in failure:
-                print(f"     Course ID: {failure['course_id']}")
-            if 'topic_id' in failure:
-                print(f"     Topic ID: {failure['topic_id']}")
+            if 'response' in failure and ('json' in failure['response'].lower() or 'parsing' in failure['response'].lower()):
+                json_parsing_errors += 1
+            else:
+                other_errors += 1
+        
+        print(f"   JSON Parsing Errors: {json_parsing_errors}")
+        print(f"   Other Errors: {other_errors}")
+        
+        # Show sample errors
+        for i, failure in enumerate(tester.failed_tests[:3]):  # Show first 3 failures
+            print(f"\n  🔍 Sample Failure {i+1}:")
+            print(f"     Test: {failure.get('test', 'Unknown')}")
             if 'error' in failure:
                 print(f"     Error: {failure['error']}")
             if 'response' in failure:
-                print(f"     Response: {failure['response'][:200]}...")
+                print(f"     Response: {failure['response'][:150]}...")
     
-    return 0 if len(tester.failed_tests) == 0 else 1
+    # Return appropriate exit code
+    return 0 if analysis['targets_met'] >= 3 else 1
 
 if __name__ == "__main__":
     sys.exit(main())

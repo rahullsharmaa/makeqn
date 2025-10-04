@@ -788,6 +788,265 @@ Respond in the following JSON format:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating PYQ solution: {str(e)}")
 
+@api_router.post("/generate-course-pyq-solutions", response_model=PYQSolutionProgress)
+async def generate_course_pyq_solutions(request: CoursePYQSolutionRequest):
+    """Generate solutions for all PYQ questions in a course"""
+    try:
+        # Get all topics for the course that have PYQ questions without solutions
+        pyq_questions_query = """
+            SELECT q.*, t.name as topic_name, t.notes as topic_notes
+            FROM questions_topic_wise q
+            JOIN topics t ON q.topic_id = t.id
+            JOIN chapters c ON t.chapter_id = c.id
+            JOIN units u ON c.unit_id = u.id
+            JOIN subjects s ON u.subject_id = s.id
+            WHERE s.course_id = %s 
+            AND (q.solution IS NULL OR q.solution = '' OR q.solution_done = false)
+            ORDER BY t.name, q.question_statement
+            LIMIT 100
+        """
+        
+        # Use raw SQL to get the questions with proper joins
+        try:
+            # Get questions through the API - first get all topics for the course
+            topics_result = supabase.rpc('get_course_topics_with_questions', {
+                'p_course_id': request.course_id
+            }).execute()
+            
+            if not topics_result.data:
+                # Fallback: get topics directly and then find questions
+                course_topics = supabase.table("topics").select("""
+                    id, name, notes,
+                    chapters!inner(
+                        units!inner(
+                            subjects!inner(
+                                course_id
+                            )
+                        )
+                    )
+                """).eq("chapters.units.subjects.course_id", request.course_id).execute()
+                
+                if not course_topics.data:
+                    return PYQSolutionProgress(
+                        total_questions=0,
+                        processed_questions=0,
+                        successful_solutions=0,
+                        failed_solutions=0,
+                        is_completed=True,
+                        error_message="No topics found for this course"
+                    )
+            
+            # Get all PYQ questions that need solutions
+            all_questions = []
+            topic_ids = [topic['id'] for topic in course_topics.data] if course_topics.data else []
+            
+            for topic_id in topic_ids:
+                questions_result = supabase.table("questions_topic_wise").select("*").eq("topic_id", topic_id).execute()
+                for question in questions_result.data:
+                    # Check if solution is missing or solution_done is false
+                    if (not question.get('solution') or 
+                        question.get('solution', '').strip() == '' or 
+                        not question.get('solution_done', False)):
+                        
+                        # Add topic info to question
+                        topic_info = next((t for t in course_topics.data if t['id'] == topic_id), {})
+                        question['topic_name'] = topic_info.get('name', '')
+                        question['topic_notes'] = topic_info.get('notes', '')
+                        all_questions.append(question)
+            
+        except Exception as e:
+            # Fallback approach if RPC doesn't exist
+            # Get all questions for the course topics
+            all_questions = []
+            
+            # First get topics for the course
+            topics_query = supabase.table("topics").select("""
+                *,
+                chapters!inner(
+                    units!inner(
+                        subjects!inner(
+                            course_id
+                        )
+                    )
+                )
+            """).eq("chapters.units.subjects.course_id", request.course_id).execute()
+            
+            for topic in topics_query.data:
+                # Get questions for each topic that need solutions
+                questions_result = supabase.table("questions_topic_wise").select("*").eq("topic_id", topic['id']).execute()
+                
+                for question in questions_result.data:
+                    # Check if solution is missing or solution_done is false
+                    if (not question.get('solution') or 
+                        question.get('solution', '').strip() == '' or 
+                        not question.get('solution_done', False)):
+                        
+                        question['topic_name'] = topic.get('name', '')
+                        question['topic_notes'] = topic.get('notes', '')
+                        all_questions.append(question)
+        
+        total_questions = len(all_questions)
+        
+        if total_questions == 0:
+            return PYQSolutionProgress(
+                total_questions=0,
+                processed_questions=0,
+                successful_solutions=0,
+                failed_solutions=0,
+                is_completed=True,
+                error_message="No PYQ questions need solutions in this course"
+            )
+        
+        # Process questions one by one
+        successful_solutions = 0
+        failed_solutions = 0
+        
+        for i, question in enumerate(all_questions):
+            try:
+                # Create a solution request
+                solution_request = PYQSolutionRequest(
+                    topic_id=question['topic_id'],
+                    question_statement=question['question_statement'],
+                    options=question.get('options', []),
+                    question_type=question.get('question_type', 'MCQ')
+                )
+                
+                # Generate solution using the existing endpoint logic
+                topic_result = supabase.table("topics").select("*").eq("id", question['topic_id']).execute()
+                if not topic_result.data:
+                    failed_solutions += 1
+                    continue
+                
+                topic = topic_result.data[0]
+                
+                # Get chapter info
+                chapter_result = supabase.table("chapters").select("*").eq("id", topic["chapter_id"]).execute()
+                chapter = chapter_result.data[0] if chapter_result.data else {}
+                
+                # Get topic notes for context
+                topic_notes = topic.get('notes', '').strip()
+                
+                # Create prompt for Gemini
+                prompt = f"""
+You are an expert educator and question solver. Analyze the following previous year question and provide the correct answer and detailed solution.
+
+Topic: {topic['name']}
+Chapter: {chapter.get('name', '')}
+Question Type: {solution_request.question_type}
+
+{f'Topic Notes (Use these concepts and methods from the chapter): {topic_notes}' if topic_notes else ''}
+
+Question: {solution_request.question_statement}
+
+{f'Options: {solution_request.options}' if solution_request.options else ''}
+
+Your task:
+1. Carefully analyze the question and determine the correct answer
+2. Provide a step-by-step solution explaining the reasoning
+3. Use the concepts from the topic notes provided above when solving
+4. Double-check your work to ensure accuracy
+
+Requirements:
+- For MCQ: Provide the correct option index (0-3)
+- For MSQ: Provide comma-separated correct option indices
+- For NAT: Provide the numerical answer
+- For SUB: Provide a comprehensive answer
+
+Respond in the following JSON format:
+{{
+    "answer": "Your answer here (following the format rules above)",
+    "solution": "Detailed step-by-step solution with clear explanations using concepts from the topic notes",
+    "confidence_level": "High/Medium/Low - your confidence in this solution"
+}}
+"""
+
+                # Generate response from Gemini
+                max_retries = len(GEMINI_API_KEYS)
+                last_error = None
+                solution_generated = False
+                
+                for attempt in range(max_retries):
+                    try:
+                        current_api_key = get_next_working_gemini_key()
+                        model = create_gemini_model_with_key(current_api_key)
+                        
+                        # Define JSON schema
+                        response_schema = genai.protos.Schema(
+                            type=genai.protos.Type.OBJECT,
+                            properties={
+                                "answer": genai.protos.Schema(type=genai.protos.Type.STRING),
+                                "solution": genai.protos.Schema(type=genai.protos.Type.STRING),
+                                "confidence_level": genai.protos.Schema(type=genai.protos.Type.STRING)
+                            },
+                            required=["answer", "solution", "confidence_level"]
+                        )
+                        
+                        generation_config = genai.types.GenerationConfig(
+                            response_mime_type="application/json",
+                            response_schema=response_schema,
+                            temperature=0.3
+                        )
+                        
+                        response = model.generate_content(prompt, generation_config=generation_config)
+                        
+                        # Parse response using robust parsing
+                        response_text = response.text.strip()
+                        solution_data = robust_parse_json(response_text)
+                        
+                        # Update the question in the database with the solution
+                        update_data = {
+                            "answer": solution_data.get("answer", ""),
+                            "solution": solution_data.get("solution", ""),
+                            "solution_done": True,
+                            "updated_at": datetime.now(timezone.utc).isoformat()
+                        }
+                        
+                        # Update the question in questions_topic_wise table
+                        update_result = supabase.table("questions_topic_wise").update(update_data).eq("id", question['id']).execute()
+                        
+                        if update_result.data:
+                            successful_solutions += 1
+                            solution_generated = True
+                            break
+                        else:
+                            raise Exception("Failed to update question in database")
+                            
+                    except Exception as e:
+                        last_error = e
+                        error_str = str(e).lower()
+                        
+                        if "quota" in error_str or "429" in error_str or "exceeded" in error_str or "invalid api key" in error_str:
+                            failed_keys.add(current_api_key)
+                            if attempt == max_retries - 1:
+                                break
+                            continue
+                        else:
+                            break
+                
+                if not solution_generated:
+                    failed_solutions += 1
+                
+            except Exception as e:
+                failed_solutions += 1
+                print(f"Error processing question {question.get('id', 'unknown')}: {str(e)}")
+            
+            # For progress tracking, we could implement real-time updates here
+            # For now, we'll just return final results
+        
+        return PYQSolutionProgress(
+            total_questions=total_questions,
+            processed_questions=total_questions,
+            successful_solutions=successful_solutions,
+            failed_solutions=failed_solutions,
+            is_completed=True,
+            error_message=f"Completed: {successful_solutions} successful, {failed_solutions} failed" if failed_solutions > 0 else None
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating course PYQ solutions: {str(e)}")
+
 @api_router.post("/generate-question", response_model=GeneratedQuestion)
 async def generate_question(request: QuestionRequest):
     """Generate a new question using Gemini AI"""

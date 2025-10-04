@@ -676,8 +676,8 @@ class QuestionMakerAPITester:
         print("=" * 60)
         
         # Use the specific IDs from review request
-        exam_id = "521d139b-8cf2-4b0f-afad-f4dc0c2c80e7"
-        course_id = "85eb29d4-de89-4697-b041-646dbddb1b3a"  # ISI->MSQMS
+        exam_id = "6c1bed83-2424-4237-8a6f-e7ed97240466"  # ISI
+        course_id = "d3ab4d23-f8d4-422b-aca2-affeb4d9609c"  # MSQMS
         
         results = {}
         

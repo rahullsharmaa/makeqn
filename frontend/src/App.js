@@ -165,6 +165,23 @@ function App() {
     }
   };
 
+  const loadTopicsPreview = async (courseId) => {
+    if (!courseId) {
+      setTopicsPreview([]);
+      return;
+    }
+    
+    try {
+      const response = await axios.get(`${API}/all-topics-with-weightage/${courseId}`);
+      const topics = response.data;
+      const topicsWithCounts = calculateQuestionsPerTopic(topics, autoConfig.totalQuestions);
+      setTopicsPreview(topicsWithCounts);
+    } catch (error) {
+      console.error("Failed to load topics preview:", error);
+      setTopicsPreview([]);
+    }
+  };
+
   const resetSelections = (selectionsToReset) => {
     if (selectionsToReset.includes('course')) setSelectedCourse("");
     if (selectionsToReset.includes('subject')) setSelectedSubject("");

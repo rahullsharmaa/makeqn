@@ -296,18 +296,31 @@ class UpdateQuestionSolution(BaseModel):
 async def update_question_solution(request: UpdateQuestionSolution):
     """Update an existing question with generated solution"""
     try:
-        # Update the question in questions_topic_wise table
+        # Try to update in questions_topic_wise table first
         result = supabase.table("questions_topic_wise").update({
             "answer": request.answer,
             "solution": request.solution,
             "updated_at": datetime.now(timezone.utc).isoformat()
         }).eq("id", request.question_id).execute()
         
-        if not result.data:
-            raise HTTPException(status_code=404, detail="Question not found")
+        if result.data:
+            return {"message": "Question solution updated successfully", "question_id": request.question_id}
         
-        return {"message": "Question solution updated successfully", "question_id": request.question_id}
+        # If not found in questions_topic_wise, try new_questions table
+        result = supabase.table("new_questions").update({
+            "answer": request.answer,
+            "solution": request.solution,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }).eq("id", request.question_id).execute()
         
+        if result.data:
+            return {"message": "Question solution updated successfully", "question_id": request.question_id}
+        
+        # If not found in either table
+        raise HTTPException(status_code=404, detail="Question not found")
+        
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error updating question solution: {str(e)}")
 def validate_question_answer(question_type: str, options: List[str], answer: str) -> bool:

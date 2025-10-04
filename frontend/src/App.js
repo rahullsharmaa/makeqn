@@ -529,6 +529,13 @@ function App() {
     toast.info("Auto-generation paused. You can resume anytime.");
   };
 
+  const stopAutoGeneration = () => {
+    setIsPaused(false);
+    setIsAutoGenerating(false);
+    setAutoProgress({ generated: 0, total: 0, currentTopic: null, percentage: 0 });
+    toast.info("Auto-generation stopped.");
+  };
+
   const resumeAutoGeneration = async () => {
     setIsPaused(false);
     toast.info("Resuming auto-generation...");

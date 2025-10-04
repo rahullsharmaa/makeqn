@@ -334,6 +334,42 @@ test_plan:
         - agent: "testing"
         - comment: "✅ COMPREHENSIVE PYQ SYSTEM TESTING COMPLETED: Tested all 6 endpoints as requested. WORKING ENDPOINTS: GET /api/existing-questions/{topic_id} (✅ retrieves PYQ questions from questions_topic_wise table), PATCH /api/update-question-solution (✅ saves solutions back to questions_topic_wise table), POST /api/save-question-manually (✅ creates questions in new_questions table), GET /api/generated-questions/{topic_id} (✅ retrieves from new_questions table). BLOCKED ENDPOINTS: POST /api/generate-pyq-solution, POST /api/generate-pyq-solution-by-id, POST /api/generate-question (❌ all fail with 429 quota exceeded - Gemini API daily limit of 200 requests reached). SYSTEM HEALTH: 60% - database operations working perfectly, AI generation blocked by API quotas. The reported 33.3% success rate and JSON parsing errors cannot be tested due to quota limitations, but the infrastructure for handling these issues is in place with proper error handling and round-robin key management."
 
+  - task: "Weightage-based question distribution fix"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+        - agent: "main"
+        - comment: "IMPLEMENTED: Fixed backend weightage calculation to use proper rounding instead of truncation. Changed from int() to round() for calculating questions per topic. Updated logic to ensure exact weightage percentages are used (e.g., 5.4434% of 1000 questions = 54 questions rounded). This should resolve the issue where system was generating one question per topic instead of respecting weightage distribution."
+
+  - task: "KaTeX + SVG formatting for questions and solutions"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+        - agent: "main"
+        - comment: "IMPLEMENTED: Updated both question generation and PYQ solution prompts to use KaTeX/LaTeX formatting. Added specific LaTeX syntax requirements (inline math: $x^2$, display math: $$\\frac{a}{b}$$). Updated answer format requirements: MCQ returns complete option text, MSQ returns JSON array of option texts, NAT returns numerical values. Both new question generation and PYQ solutions now use consistent KaTeX formatting for mathematical expressions."
+
+  - task: "Answer format standardization"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+        - agent: "main"
+        - comment: "IMPLEMENTED: Updated validation function to handle new answer formats. MCQ answers now store complete option text instead of indices. MSQ answers store arrays of complete option texts. Added JSON parsing logic for MSQ responses. Updated both question generation and PYQ solution generation to use this new format for frontend-friendly answer highlighting."
+
 agent_communication:
     - agent: "main"
     - message: "Starting comprehensive fix for PYQ solution generation system. Current task: Fix JSON parsing errors (currently 33.3% success rate), ensure proper data saving in questions_topic_wise table for PYQ solutions, ensure proper saving in new_questions table, and resolve all related issues."

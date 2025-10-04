@@ -274,7 +274,7 @@ function App() {
       toast.success("Auto-generation started!");
       
       // Start the auto-generation process
-      await processAutoGeneration(topics);
+      await processAutoGeneration(topics, questionTypeToUse);
       
     } catch (error) {
       console.error("Auto-generation error:", error);

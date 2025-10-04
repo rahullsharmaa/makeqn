@@ -103,6 +103,11 @@ function App() {
       // Load parts and slots for the course
       loadParts(courseId);
       loadSlots(courseId);
+      
+      // Load topics preview for auto-generation mode
+      if (isAutoMode) {
+        loadTopicsPreview(courseId);
+      }
     } catch (error) {
       toast.error("Failed to load subjects");
     }

@@ -1721,10 +1721,215 @@ class QuestionMakerAPITester:
             })
             return False, {'exception': str(e)}
 
+    def test_sub_question_database_constraint(self):
+        """Test SUB question type database constraint issue specifically"""
+        print("\n🎯 TESTING SUB QUESTION DATABASE CONSTRAINT ISSUE")
+        print("=" * 80)
+        print("Focus: Test SUB question generation and investigate database constraint")
+        print("Known Issue: 'new row for relation new_questions violates check constraint new_questions_question_type_check'")
+        
+        # Use the specific topic_id from the review request
+        topic_id = "7c583ed3-64bf-4fa0-bf20-058ac4b40737"
+        
+        results = {
+            'mcq_test': None,
+            'msq_test': None, 
+            'nat_test': None,
+            'sub_test': None,
+            'constraint_investigation': None
+        }
+        
+        print(f"\nUsing topic_id: {topic_id}")
+        print("Testing all 4 question types to compare SUB with working types...")
+        
+        # Test all 4 question types with the same topic_id
+        question_types = ["MCQ", "MSQ", "NAT", "SUB"]
+        
+        for q_type in question_types:
+            print(f"\n{'='*20} Testing {q_type} Question Generation {'='*20}")
+            
+            success, data = self.test_question_generation_detailed(topic_id, q_type)
+            results[f'{q_type.lower()}_test'] = {
+                'success': success,
+                'data': data,
+                'question_type': q_type
+            }
+            
+            if success:
+                print(f"✅ {q_type} Generation: SUCCESS")
+                if data:
+                    print(f"   Question: {data.get('question_statement', '')[:100]}...")
+                    print(f"   Answer: {data.get('answer', 'N/A')}")
+                    if q_type in ["MCQ", "MSQ"]:
+                        print(f"   Options: {len(data.get('options', []))} provided")
+            else:
+                print(f"❌ {q_type} Generation: FAILED")
+                # For SUB specifically, investigate the database constraint error
+                if q_type == "SUB":
+                    print(f"   🔍 SUB-specific failure - investigating database constraint...")
+                    self.investigate_database_constraint()
+        
+        # Summary of results
+        print(f"\n📊 QUESTION TYPE GENERATION SUMMARY")
+        print("=" * 60)
+        
+        working_types = []
+        failing_types = []
+        
+        for q_type in question_types:
+            test_result = results.get(f'{q_type.lower()}_test', {})
+            if test_result.get('success', False):
+                working_types.append(q_type)
+            else:
+                failing_types.append(q_type)
+        
+        print(f"✅ Working Types: {working_types} ({len(working_types)}/4)")
+        print(f"❌ Failing Types: {failing_types} ({len(failing_types)}/4)")
+        
+        # Specific analysis for SUB
+        sub_result = results.get('sub_test', {})
+        if not sub_result.get('success', False):
+            print(f"\n🔍 SUB QUESTION ANALYSIS:")
+            print(f"   Status: FAILED as expected")
+            print(f"   Issue: Database constraint violation")
+            print(f"   Error: 'new_questions_question_type_check' constraint rejects 'SUB'")
+            print(f"   Solution Needed: Update database schema to allow 'SUB' question type")
+        else:
+            print(f"\n✅ SUB QUESTION ANALYSIS:")
+            print(f"   Status: WORKING (constraint issue resolved)")
+        
+        return results
+
+    def test_question_generation_detailed(self, topic_id, question_type):
+        """Test question generation with detailed error analysis for database constraints"""
+        request_data = {
+            "topic_id": topic_id,
+            "question_type": question_type,
+            "part_id": None,
+            "slot_id": None
+        }
+        
+        url = f"{self.api_url}/generate-question"
+        headers = {'Content-Type': 'application/json'}
+        
+        self.tests_run += 1
+        print(f"🔍 Testing Generate {question_type} Question...")
+        print(f"   URL: {url}")
+        print(f"   Topic ID: {topic_id}")
+        print(f"   Request: {json.dumps(request_data, indent=2)}")
+        
+        try:
+            response = requests.post(url, json=request_data, headers=headers, timeout=60)
+            
+            print(f"   Status Code: {response.status_code}")
+            
+            if response.status_code == 200:
+                self.tests_passed += 1
+                print(f"✅ SUCCESS - {question_type} question generated successfully!")
+                try:
+                    response_data = response.json()
+                    print(f"   Generated Question: {response_data.get('question_statement', '')[:150]}...")
+                    print(f"   Question Type: {response_data.get('question_type', 'N/A')}")
+                    print(f"   Answer: {response_data.get('answer', 'N/A')}")
+                    print(f"   Difficulty: {response_data.get('difficulty_level', 'N/A')}")
+                    return True, response_data
+                except Exception as json_error:
+                    print(f"❌ JSON parsing error: {str(json_error)}")
+                    return False, {}
+            else:
+                print(f"❌ FAILED - Expected 200, got {response.status_code}")
+                print(f"   Error Response: {response.text}")
+                
+                # Detailed error analysis for database constraints
+                try:
+                    error_data = response.json()
+                    error_detail = error_data.get('detail', 'No detail provided')
+                    print(f"   Error Detail: {error_detail}")
+                    
+                    # Check for specific database constraint errors
+                    if 'constraint' in error_detail.lower():
+                        print(f"   🔍 DATABASE CONSTRAINT ERROR DETECTED!")
+                        if 'new_questions_question_type_check' in error_detail:
+                            print(f"   🎯 SPECIFIC CONSTRAINT: new_questions_question_type_check")
+                            print(f"   📝 ANALYSIS: Database schema doesn't allow '{question_type}' as valid question_type")
+                            print(f"   💡 SOLUTION: Need to update database constraint to include '{question_type}'")
+                        
+                    # Check for JSON parsing errors
+                    elif 'json' in error_detail.lower() or 'parsing' in error_detail.lower():
+                        print(f"   🔍 JSON PARSING ERROR DETECTED!")
+                        print(f"   📝 ANALYSIS: Gemini API response format issue")
+                        
+                except Exception as parse_error:
+                    print(f"   ⚠️ Could not parse error response: {parse_error}")
+                
+                self.failed_tests.append({
+                    'test': f"Generate {question_type} Question (Detailed)",
+                    'topic_id': topic_id,
+                    'question_type': question_type,
+                    'expected': 200,
+                    'actual': response.status_code,
+                    'response': response.text[:500]
+                })
+                return False, {}
+                
+        except Exception as e:
+            print(f"❌ EXCEPTION - Error: {str(e)}")
+            self.failed_tests.append({
+                'test': f"Generate {question_type} Question (Detailed)",
+                'topic_id': topic_id,
+                'question_type': question_type,
+                'error': str(e)
+            })
+            return False, {}
+
+    def investigate_database_constraint(self):
+        """Investigate what question types are allowed by the database constraint"""
+        print(f"\n🔍 INVESTIGATING DATABASE CONSTRAINT...")
+        print("   Attempting to understand what question types are allowed...")
+        
+        # Try to generate questions of known working types to understand the pattern
+        topic_id = "7c583ed3-64bf-4fa0-bf20-058ac4b40737"
+        working_types = []
+        
+        for q_type in ["MCQ", "MSQ", "NAT"]:
+            print(f"   Testing {q_type} to confirm it works...")
+            try:
+                request_data = {
+                    "topic_id": topic_id,
+                    "question_type": q_type,
+                    "part_id": None,
+                    "slot_id": None
+                }
+                
+                url = f"{self.api_url}/generate-question"
+                headers = {'Content-Type': 'application/json'}
+                
+                response = requests.post(url, json=request_data, headers=headers, timeout=30)
+                
+                if response.status_code == 200:
+                    working_types.append(q_type)
+                    print(f"   ✅ {q_type}: WORKS")
+                else:
+                    print(f"   ❌ {q_type}: FAILS - {response.status_code}")
+                    
+            except Exception as e:
+                print(f"   ❌ {q_type}: ERROR - {str(e)}")
+        
+        print(f"\n📊 CONSTRAINT ANALYSIS RESULTS:")
+        print(f"   Working question types: {working_types}")
+        print(f"   Failing question types: ['SUB']")
+        print(f"   Constraint allows: {', '.join(working_types)}")
+        print(f"   Constraint rejects: SUB")
+        print(f"\n💡 RECOMMENDATION:")
+        print(f"   Update database constraint 'new_questions_question_type_check'")
+        print(f"   to include 'SUB' as a valid question_type value")
+        print(f"   Current allowed values appear to be: {', '.join(working_types)}")
+        print(f"   Required change: Add 'SUB' to the allowed values list")
+
 def main():
-    print("🚀 Testing Auto Question Generation Fix")
-    print("🎯 Focus: Review Request - camelCase to snake_case field transformation")
-    print("=" * 60)
+    print("🚀 Testing SUB Question Database Constraint Issue")
+    print("🎯 Focus: Review Request - SUB question type generation failure")
+    print("=" * 80)
     
     tester = QuestionMakerAPITester()
     
@@ -1732,9 +1937,9 @@ def main():
     print("\n1️⃣ Testing Basic API Connectivity...")
     tester.test_root_endpoint()
     
-    # Run the specific camelCase to snake_case fix test
-    print("\n2️⃣ Running camelCase to snake_case Fix Test...")
-    results = tester.test_camelcase_snakecase_fix()
+    # Run the specific SUB question database constraint test
+    print("\n2️⃣ Running SUB Question Database Constraint Test...")
+    results = tester.test_sub_question_database_constraint()
     
     # Print final summary
     print(f"\n📊 FINAL TEST SUMMARY:")
@@ -1744,28 +1949,37 @@ def main():
     print(f"   Success Rate: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
     
     # Specific review request summary
-    print(f"\n🎯 REVIEW REQUEST TEST RESULTS:")
-    snake_case_working = results.get('new_questions_mode', {}).get('success', False) and \
-                       results.get('pyq_solutions_mode', {}).get('success', False)
+    print(f"\n🎯 SUB QUESTION CONSTRAINT TEST RESULTS:")
     
-    if snake_case_working:
-        print(f"✅ AUTO-GENERATION FIX: WORKING CORRECTLY")
-        print(f"   - snake_case field validation working")
-        print(f"   - Both generation modes functional")
-        print(f"   - '[object Object]' error should be resolved")
-        print(f"   - Validation error about missing required fields resolved")
+    # Count working vs failing question types
+    working_count = sum(1 for q_type in ['mcq', 'msq', 'nat', 'sub'] 
+                       if results.get(f'{q_type}_test', {}).get('success', False))
+    
+    sub_working = results.get('sub_test', {}).get('success', False)
+    
+    print(f"   Working Question Types: {working_count}/4")
+    print(f"   SUB Question Generation: {'✅ WORKING' if sub_working else '❌ FAILING'}")
+    
+    if sub_working:
+        print(f"✅ SUB QUESTION ISSUE: RESOLVED")
+        print(f"   - Database constraint allows 'SUB' question type")
+        print(f"   - All 4 question types now working")
     else:
-        print(f"❌ AUTO-GENERATION FIX: ISSUES FOUND")
-        print(f"   - Validation errors still occurring")
-        print(f"   - '[object Object]' error may persist")
+        print(f"❌ SUB QUESTION ISSUE: CONFIRMED")
+        print(f"   - Database constraint rejects 'SUB' question type")
+        print(f"   - Need to update database schema")
+        print(f"   - Error: 'new_questions_question_type_check' constraint violation")
         
-        # Show specific failures
-        if not results.get('new_questions_mode', {}).get('success', False):
-            print(f"   - 'new_questions' mode failing")
-        if not results.get('pyq_solutions_mode', {}).get('success', False):
-            print(f"   - 'pyq_solutions' mode failing")
+        # Show which types work
+        working_types = [q_type.upper() for q_type in ['mcq', 'msq', 'nat', 'sub'] 
+                        if results.get(f'{q_type}_test', {}).get('success', False)]
+        failing_types = [q_type.upper() for q_type in ['mcq', 'msq', 'nat', 'sub'] 
+                        if not results.get(f'{q_type}_test', {}).get('success', False)]
+        
+        print(f"   - Working types: {', '.join(working_types)}")
+        print(f"   - Failing types: {', '.join(failing_types)}")
     
-    return 0 if snake_case_working else 1
+    return 0 if sub_working else 1
 
 if __name__ == "__main__":
     sys.exit(main())

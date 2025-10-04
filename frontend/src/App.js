@@ -429,14 +429,26 @@ function App() {
     }
 
     // Generate solution for the PYQ
-    const response = await axios.post(`${API}/generate-pyq-solution`, {
+    const solutionResponse = await axios.post(`${API}/generate-pyq-solution`, {
       topic_id: topicId,
       question_statement: questionWithoutSolution.question_statement,
       options: questionWithoutSolution.options,
       question_type: questionWithoutSolution.question_type || "MCQ"
     });
 
-    return response.data;
+    // Update the existing question with the generated solution
+    const updateResponse = await axios.patch(`${API}/update-question-solution`, {
+      question_id: questionWithoutSolution.id,
+      answer: solutionResponse.data.answer,
+      solution: solutionResponse.data.solution,
+      confidence_level: solutionResponse.data.confidence_level
+    });
+
+    return {
+      ...solutionResponse.data,
+      updated_question_id: questionWithoutSolution.id,
+      update_success: updateResponse.data
+    };
   };
 
   const pauseAutoGeneration = () => {

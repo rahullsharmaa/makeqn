@@ -643,9 +643,15 @@ function App() {
     
     // Get current topics and continue from where we left off
     try {
-      const topicsResponse = await axios.get(`${API}/all-topics-with-weightage/${selectedCourse}`);
-      const topics = topicsResponse.data;
-      await processAutoGeneration(topics);
+      if (generationMode === "pyq_solutions") {
+        // For PYQ solutions, restart the course-level generation
+        await processPYQSolutionGeneration(selectedCourse);
+      } else {
+        // For new questions, continue with topic-level generation
+        const topicsResponse = await axios.get(`${API}/all-topics-with-weightage/${selectedCourse}`);
+        const topics = topicsResponse.data;
+        await processAutoGeneration(topics);
+      }
     } catch (error) {
       toast.error("Failed to resume auto-generation");
       setIsAutoGenerating(false);

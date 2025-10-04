@@ -283,9 +283,11 @@ metadata:
 test_plan:
   current_focus:
     - "MCQ JSON parsing fix"
+    - "NAT validation fix"
     - "SUB database constraint fix"
   stuck_tasks:
     - "MCQ JSON parsing fix"
+    - "NAT validation fix"
     - "SUB database constraint fix"
   test_all: false
   test_priority: "high_first"

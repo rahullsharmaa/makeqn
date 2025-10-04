@@ -29,6 +29,67 @@ GEMINI_API_KEYS = [key.strip() for key in GEMINI_API_KEYS if key.strip()]
 current_key_index = 0
 failed_keys = set()
 
+def sanitize_gemini_json(raw_output: str) -> str:
+    """Sanitize and clean Gemini API JSON response to handle malformed JSON"""
+    if not raw_output or not raw_output.strip():
+        raise ValueError("Empty response from Gemini API")
+    
+    # Remove markdown code blocks and extra formatting
+    cleaned = re.sub(r"```json\s*", "", raw_output)
+    cleaned = re.sub(r"```\s*$", "", cleaned)
+    cleaned = re.sub(r"```.*?```", "", cleaned, flags=re.DOTALL)
+    
+    # Find JSON object boundaries
+    start = cleaned.find('{')
+    end = cleaned.rfind('}')
+    
+    if start == -1 or end == -1:
+        raise ValueError("No valid JSON object found in response")
+    
+    # Extract the JSON part
+    json_str = cleaned[start:end + 1]
+    
+    # Fix common JSON issues
+    # Remove trailing commas before closing brackets/braces
+    json_str = re.sub(r',\s*([\]}])', r'\1', json_str)
+    
+    # Fix unterminated strings by ensuring proper quote matching
+    # This is a basic attempt - for production, consider more sophisticated parsing
+    json_str = json_str.strip()
+    
+    # Ensure the JSON ends properly
+    if not json_str.endswith('}'):
+        json_str += '}'
+    
+    return json_str
+
+def robust_parse_json(response_text: str) -> dict:
+    """Robustly parse Gemini JSON response with error recovery"""
+    max_retries = 3
+    
+    for attempt in range(max_retries):
+        try:
+            # First, try direct parsing
+            if attempt == 0:
+                return json.loads(response_text.strip())
+            
+            # If that fails, try sanitizing
+            clean_json = sanitize_gemini_json(response_text)
+            return json.loads(clean_json)
+            
+        except (json.JSONDecodeError, ValueError) as e:
+            if attempt == max_retries - 1:
+                # Log the error for debugging
+                print(f"JSON parsing failed after {max_retries} attempts. Raw response: {response_text[:500]}")
+                raise HTTPException(
+                    status_code=500, 
+                    detail=f"Failed to parse AI response as JSON after multiple attempts: {str(e)}"
+                )
+            continue
+    
+    # Should never reach here, but just in case
+    raise HTTPException(status_code=500, detail="Unexpected error in JSON parsing")
+
 def get_next_working_gemini_key():
     """Get the next working Gemini API key using round-robin"""
     global current_key_index

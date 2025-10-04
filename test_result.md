@@ -137,6 +137,9 @@ backend:
         - working: false
         - agent: "testing"
         - comment: "REGRESSION: MCQ question generation failing again with JSON parsing error 'Expecting property name enclosed in double quotes: line 1 column 2 (char 1)'. While MSQ and NAT work consistently, MCQ has intermittent JSON parsing issues. The structured JSON output works for other question types but MCQ responses occasionally return malformed JSON. This suggests the issue may be specific to MCQ prompt complexity or Gemini's handling of MCQ-specific instructions."
+        - working: false
+        - agent: "testing"
+        - comment: "INTERMITTENT ISSUE CONFIRMED: MCQ generation has 33.3% success rate (1/3 attempts successful). Mix of JSON parsing errors and validation failures. When successful, generates proper MCQ questions with correct format. MSQ generation is 100% reliable (3/3 success). Issue appears to be Gemini API inconsistency with MCQ prompts specifically. Recommend implementing retry logic or prompt optimization for MCQ generation to improve reliability."
 
   - task: "NAT validation fix"
     implemented: true

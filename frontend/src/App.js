@@ -832,6 +832,65 @@ function App() {
           </Card>
         )}
 
+        {/* Topic Distribution Preview */}
+        {isAutoMode && topicsPreview.length > 0 && (
+          <Card className="mb-8 border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+            <CardHeader className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-t-lg">
+              <CardTitle className="flex items-center gap-2">
+                <GraduationCap className="h-5 w-5" />
+                Topic Distribution Preview
+              </CardTitle>
+              <CardDescription className="text-indigo-100">
+                Showing how questions will be distributed across topics based on weightage
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+                {topicsPreview.slice(0, 15).map((topic, index) => (
+                  <div key={topic.id} className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 rounded-lg border">
+                    <h3 className="font-semibold text-sm text-slate-800 truncate" title={topic.name}>
+                      {topic.name}
+                    </h3>
+                    <div className="mt-2 space-y-1">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-slate-600">Weightage</span>
+                        <Badge variant="outline" className="text-indigo-600 border-indigo-200">
+                          {topic.weightage_percent.toFixed(2)}%
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-slate-600">Questions</span>
+                        <Badge className="bg-purple-100 text-purple-800 border-purple-200">
+                          {topic.estimated_questions}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {topicsPreview.length > 15 && (
+                <p className="text-center text-sm text-slate-500 mt-4">
+                  And {topicsPreview.length - 15} more topics...
+                </p>
+              )}
+              <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
+                <div className="grid grid-cols-2 gap-4 text-center">
+                  <div>
+                    <p className="text-2xl font-bold text-green-700">{topicsPreview.length}</p>
+                    <p className="text-sm text-green-600">Total Topics</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-emerald-700">
+                      {topicsPreview.reduce((sum, topic) => sum + topic.estimated_questions, 0)}
+                    </p>
+                    <p className="text-sm text-emerald-600">Total Questions</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Selection Panel */}
           <div className="lg:col-span-2 space-y-6">

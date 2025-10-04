@@ -544,6 +544,30 @@ function App() {
     };
   };
 
+  const generateCoursePYQSolutions = async (courseId) => {
+    try {
+      console.log(`Starting PYQ solution generation for course: ${courseId}`);
+      
+      // Call the new course-level PYQ solution endpoint
+      const response = await axios.post(`${API}/generate-course-pyq-solutions`, {
+        course_id: courseId
+      });
+      
+      const progress = response.data;
+      
+      console.log(`PYQ Solution Generation Complete:`, progress);
+      
+      // Update UI with results
+      setPyqSolutionsCount(progress.successful_solutions);
+      
+      return progress;
+      
+    } catch (error) {
+      console.error('Error generating course PYQ solutions:', error);
+      throw error;
+    }
+  };
+
   const pauseAutoGeneration = () => {
     setIsPaused(true);
     toast.info("Auto-generation paused. You can resume anytime.");

@@ -346,8 +346,8 @@ function App() {
         while (retryCount < maxRetries && !success && !isPaused) {
           try {
             if (generationMode === "new_questions") {
-              // Generate new questions using the selected question type
-              await generateQuestionForTopic(topicInfo.id, selectedQuestionType);
+              // Generate new questions using the specified question type
+              await generateQuestionForTopic(topicInfo.id, questionType);
             } else {
               // Generate PYQ solutions
               const result = await generatePYQSolutionForTopic(topicInfo.id);

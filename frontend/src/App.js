@@ -331,34 +331,54 @@ function App() {
 
       // Generate questions for this topic
       for (let q = 0; q < questionsForTopic && !isPaused; q++) {
-        try {
-          if (generationMode === "new_questions") {
-            // Generate new questions using the selected question type
-            await generateQuestionForTopic(topicInfo.id, selectedQuestionType);
-          } else {
-            // Generate PYQ solutions
-            await generatePYQSolutionForTopic(topicInfo.id);
-          }
-          
-          totalGenerated++;
-          setAutoProgress(prev => ({
-            ...prev,
-            generated: totalGenerated,
-            percentage: Math.round((totalGenerated / totalQuestions) * 100)
-          }));
+        let retryCount = 0;
+        let maxRetries = 3;
+        let success = false;
+        
+        while (retryCount < maxRetries && !success && !isPaused) {
+          try {
+            if (generationMode === "new_questions") {
+              // Generate new questions using the selected question type
+              await generateQuestionForTopic(topicInfo.id, selectedQuestionType);
+            } else {
+              // Generate PYQ solutions
+              const result = await generatePYQSolutionForTopic(topicInfo.id);
+              if (result === null) {
+                // No questions to process for this topic, skip
+                success = true;
+                continue;
+              }
+            }
+            
+            success = true;
+            totalGenerated++;
+            setAutoProgress(prev => ({
+              ...prev,
+              generated: totalGenerated,
+              percentage: Math.round((totalGenerated / totalQuestions) * 100)
+            }));
 
-          if (generationMode === "new_questions") {
-            setNewQuestionsCount(prev => prev + 1);
-          } else {
-            setPyqSolutionsCount(prev => prev + 1);
-          }
+            if (generationMode === "new_questions") {
+              setNewQuestionsCount(prev => prev + 1);
+            } else {
+              setPyqSolutionsCount(prev => prev + 1);
+            }
 
-          // Small delay to prevent rate limiting
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-        } catch (error) {
-          console.error(`Error generating question for topic ${topicInfo.name}:`, error);
-          toast.error(`Error generating question for ${topicInfo.name}`);
+            // Small delay to prevent rate limiting
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+          } catch (error) {
+            retryCount++;
+            console.error(`Error generating ${generationMode === "new_questions" ? "question" : "solution"} for topic ${topicInfo.name} (attempt ${retryCount}/${maxRetries}):`, error);
+            
+            if (retryCount >= maxRetries) {
+              console.error(`Failed to generate ${generationMode === "new_questions" ? "question" : "solution"} for topic ${topicInfo.name} after ${maxRetries} attempts`);
+              toast.error(`Skipped topic ${topicInfo.name} after ${maxRetries} failed attempts`);
+            } else {
+              // Wait before retry
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+          }
         }
       }
     }

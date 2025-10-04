@@ -569,6 +569,151 @@ Respond in the following JSON format:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating PYQ solution: {str(e)}")
 
+@api_router.post("/generate-pyq-solution", response_model=GeneratedSolution)
+async def generate_pyq_solution(request: PYQSolutionRequest):
+    """Generate solution for an existing PYQ question"""
+    try:
+        # Get the question details from questions_topic_wise table first
+        question_result = supabase.table("questions_topic_wise").select("*").eq("id", request.question_id).execute()
+        question = None
+        source_table = "questions_topic_wise"
+        
+        if question_result.data:
+            question = question_result.data[0]
+        else:
+            # If not found in questions_topic_wise, try new_questions table  
+            question_result = supabase.table("new_questions").select("*").eq("id", request.question_id).execute()
+            if question_result.data:
+                question = question_result.data[0]
+                source_table = "new_questions"
+            else:
+                raise HTTPException(status_code=404, detail="Question not found in either questions_topic_wise or new_questions table")
+        
+        # Get topic information for context
+        topic_result = supabase.table("topics").select("*").eq("id", question["topic_id"]).execute()
+        if not topic_result.data:
+            raise HTTPException(status_code=404, detail="Topic not found")
+        
+        topic = topic_result.data[0]
+        
+        # Get chapter and course information for better context
+        chapter_result = supabase.table("chapters").select("*").eq("id", topic["chapter_id"]).execute()
+        chapter = chapter_result.data[0] if chapter_result.data else {}
+        
+        # Get topic notes for context (as requested by user)
+        topic_notes = topic.get('notes', '').strip()
+        
+        # Create prompt for Gemini to solve the PYQ
+        prompt = f"""
+You are an expert educator and question solver. Analyze the following previous year question and provide the correct answer and detailed solution.
+
+Topic: {topic['name']}
+Chapter: {chapter.get('name', '')}
+Question Type: {question['question_type']}
+
+{f'Topic Notes (Use these concepts and methods from the chapter): {topic_notes}' if topic_notes else ''}
+
+Question: {question['question_statement']}
+
+{f'Options: {question.get("options", [])}' if question.get("options") else ''}
+
+Your task:
+1. Carefully analyze the question and determine the correct answer
+2. Provide a step-by-step solution explaining the reasoning
+3. Use the concepts from the topic notes provided above when solving
+4. Double-check your work to ensure accuracy
+
+Requirements:
+- For MCQ: Provide the correct option index (0-3)
+- For MSQ: Provide comma-separated correct option indices
+- For NAT: Provide the numerical answer
+- For SUB: Provide a comprehensive answer
+
+Respond in the following JSON format:
+{{
+    "answer": "Your answer here (following the format rules above)",
+    "solution": "Detailed step-by-step solution with clear explanations using concepts from the topic notes",
+    "confidence_level": "High/Medium/Low - your confidence in this solution"
+}}
+"""
+
+        # Generate response from Gemini with round-robin key handling
+        max_retries = len(GEMINI_API_KEYS)
+        last_error = None
+        
+        for attempt in range(max_retries):
+            try:
+                # Get next working API key
+                current_api_key = get_next_working_gemini_key()
+                
+                # Create model with current key
+                model = create_gemini_model_with_key(current_api_key)
+                
+                # Define JSON schema for PYQ solution output
+                response_schema = genai.protos.Schema(
+                    type=genai.protos.Type.OBJECT,
+                    properties={
+                        "answer": genai.protos.Schema(type=genai.protos.Type.STRING),
+                        "solution": genai.protos.Schema(type=genai.protos.Type.STRING),
+                        "confidence_level": genai.protos.Schema(type=genai.protos.Type.STRING)
+                    },
+                    required=["answer", "solution", "confidence_level"]
+                )
+                
+                # Configure generation for structured JSON output with schema
+                generation_config = genai.types.GenerationConfig(
+                    response_mime_type="application/json",
+                    response_schema=response_schema,
+                    temperature=0.3  # Lower temperature for more accurate answers
+                )
+                
+                # Generate content with structured output
+                response = model.generate_content(prompt, generation_config=generation_config)
+                break
+                
+            except Exception as e:
+                last_error = e
+                error_str = str(e).lower()
+                
+                # Check if it's a quota/authentication error
+                if "quota" in error_str or "429" in error_str or "exceeded" in error_str or "invalid api key" in error_str:
+                    failed_keys.add(current_api_key)
+                    if attempt == max_retries - 1:
+                        raise HTTPException(status_code=429, detail=f"All Gemini API keys exhausted. Last error: {str(e)}")
+                    continue
+                else:
+                    raise HTTPException(status_code=500, detail=f"Gemini API error: {str(e)}")
+        
+        if last_error and 'response' not in locals():
+            raise HTTPException(status_code=500, detail=f"Failed after all retries: {str(last_error)}")
+        
+        # Parse the JSON response
+        try:
+            response_text = response.text.strip()
+            solution_data = json.loads(response_text)
+        except json.JSONDecodeError as e:
+            raise HTTPException(status_code=500, detail=f"Error parsing AI response: {str(e)}")
+
+        # Validate the solution
+        if not isinstance(solution_data, dict):
+            raise HTTPException(status_code=500, detail="AI response is not a valid object")
+        
+        # Create response
+        generated_solution = GeneratedSolution(
+            question_id=request.question_id,
+            question_statement=question["question_statement"],
+            answer=solution_data.get("answer", ""),
+            solution=solution_data.get("solution", ""),
+            confidence_level=solution_data.get("confidence_level", "Medium")
+        )
+        
+        return generated_solution
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating PYQ solution: {str(e)}")
+
 @api_router.post("/generate-question", response_model=GeneratedQuestion)
 async def generate_question(request: QuestionRequest):
     """Generate a new question using Gemini AI"""

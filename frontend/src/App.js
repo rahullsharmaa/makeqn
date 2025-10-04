@@ -252,10 +252,8 @@ function App() {
       return;
     }
     
-    if (!selectedQuestionType) {
-      toast.error("Please select a question type for auto-generation");
-      return;
-    }
+    // For auto-generation, question type is optional since we'll use the selected type or default to MCQ
+    const questionTypeToUse = selectedQuestionType || "MCQ";
 
     setIsAutoGenerating(true);
     setAutoProgress({ generated: 0, total: autoConfig.totalQuestions, currentTopic: null, percentage: 0 });

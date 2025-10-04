@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from supabase import create_client, Client
 import google.generativeai as genai
 import json
+import re
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')

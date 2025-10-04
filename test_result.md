@@ -315,9 +315,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Final testing of complete auto-generation system"
+    - "Comprehensive PYQ solution system testing"
   stuck_tasks:
     - "SUB database constraint fix"
+    - "PYQ solution JSON schema fix"
   test_all: false
   test_priority: "high_first"
 

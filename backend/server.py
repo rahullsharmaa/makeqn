@@ -582,22 +582,31 @@ Question: {request.question_statement}
 
 {f'Options: {request.options}' if request.options else ''}
 
+FORMATTING REQUIREMENTS:
+1. Use KaTeX/LaTeX syntax for all mathematical expressions in the solution:
+   - For inline math: $x^2 + y^2 = z^2$
+   - For display math: $$\\frac{{a}}{{b}} = \\frac{{c}}{{d}}$$
+   - Use proper LaTeX commands: \\frac, \\sqrt, \\int, \\sum, \\lim, etc.
+2. All mathematical symbols, formulas, and equations must be in LaTeX syntax
+3. Make the solution render-ready for KaTeX + SVG display
+
+ANSWER FORMAT REQUIREMENTS:
+- MCQ: Provide the complete correct option text (exact text from options)
+- MSQ: Provide JSON array of complete correct option texts ["option1", "option2"]  
+- NAT: Provide the numerical answer as a number
+- SUB: Provide the complete descriptive answer
+
 Your task:
 1. Carefully analyze the question and determine the correct answer
-2. Provide a step-by-step solution explaining the reasoning
+2. Provide a step-by-step solution with proper LaTeX formatting for all math
 3. Use the concepts from the topic notes provided above when solving
 4. Double-check your work to ensure accuracy
-
-Requirements:
-- For MCQ: Provide the correct option index (0-3)
-- For MSQ: Provide comma-separated correct option indices
-- For NAT: Provide the numerical answer
-- For SUB: Provide a comprehensive answer
+5. Format all mathematical expressions using proper LaTeX syntax
 
 Respond in the following JSON format:
 {{
-    "answer": "Your answer here (following the format rules above)",
-    "solution": "Detailed step-by-step solution with clear explanations using concepts from the topic notes",
+    "answer": "Complete option text for MCQ, JSON array for MSQ, numerical value for NAT, or descriptive answer for SUB",
+    "solution": "Detailed step-by-step solution with LaTeX formatting for all mathematical content",
     "confidence_level": "High/Medium/Low - your confidence in this solution"
 }}
 """

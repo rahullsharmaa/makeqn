@@ -2,7 +2,7 @@ import requests
 import json
 
 def explore_all_data():
-    base_url = "https://questgen-agent-1.preview.emergentagent.com/api"
+    base_url = "https://quizgen-ai-2.preview.emergentagent.com/api"
     
     print("🔍 Exploring all available data...")
     

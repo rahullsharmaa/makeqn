@@ -10,7 +10,7 @@ import sys
 
 def test_object_object_error():
     """Test the specific scenario mentioned in the review request"""
-    base_url = "https://questgen-agent-1.preview.emergentagent.com"
+    base_url = "https://quizgen-ai-2.preview.emergentagent.com"
     api_url = f"{base_url}/api"
     headers = {'Content-Type': 'application/json'}
     

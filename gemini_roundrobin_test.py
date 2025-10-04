@@ -4,7 +4,7 @@ import time
 from datetime import datetime
 
 class GeminiRoundRobinTester:
-    def __init__(self, base_url="https://questgen-agent-1.preview.emergentagent.com"):
+    def __init__(self, base_url="https://quizgen-ai-2.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.topic_id = "7c583ed3-64bf-4fa0-bf20-058ac4b40737"  # Known working topic

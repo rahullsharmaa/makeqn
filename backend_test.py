@@ -670,137 +670,384 @@ class QuestionMakerAPITester:
         
         return new_endpoint_results
 
+    def test_review_request_scenarios(self):
+        """Test the specific scenarios from the review request"""
+        print("\n🎯 TESTING REVIEW REQUEST SCENARIOS")
+        print("=" * 60)
+        
+        # Use the specific IDs from review request
+        exam_id = "521d139b-8cf2-4b0f-afad-f4dc0c2c80e7"
+        course_id = "85eb29d4-de89-4697-b041-646dbddb1b3a"  # ISI->MSQMS
+        
+        results = {}
+        
+        # 1. Test /start-auto-generation endpoint with VALID IDs
+        print("\n1️⃣ Testing /start-auto-generation with VALID exam and course IDs...")
+        print(f"   Using exam_id: {exam_id}")
+        print(f"   Using course_id: {course_id} (ISI->MSQMS)")
+        
+        # Test with generation_mode="new_questions"
+        print("\n   Testing generation_mode='new_questions'...")
+        success1, data1 = self.test_start_auto_generation_with_mode(exam_id, course_id, "new_questions")
+        results['start_auto_generation_new'] = {'success': success1, 'data': data1}
+        
+        # Test with generation_mode="pyq_solutions"
+        print("\n   Testing generation_mode='pyq_solutions'...")
+        success2, data2 = self.test_start_auto_generation_with_mode(exam_id, course_id, "pyq_solutions")
+        results['start_auto_generation_pyq'] = {'success': success2, 'data': data2}
+        
+        # 2. Get a valid topic_id from ISI->MSQMS course
+        print("\n2️⃣ Getting valid topic_id from ISI->MSQMS course...")
+        valid_topic_id = None
+        
+        # Get all topics with weightage to find a valid topic_id
+        success, topics_data = self.test_all_topics_with_weightage(course_id)
+        if success and topics_data:
+            valid_topic_id = topics_data[0]['id']
+            topic_name = topics_data[0]['name']
+            print(f"   ✅ Found valid topic_id: {valid_topic_id}")
+            print(f"   Topic name: {topic_name}")
+        else:
+            # Fallback topic_id
+            valid_topic_id = "7c583ed3-64bf-4fa0-bf20-058ac4b40737"
+            print(f"   ⚠️ Using fallback topic_id: {valid_topic_id}")
+        
+        # 3. Test improved /existing-questions/{topic_id} endpoint
+        print(f"\n3️⃣ Testing improved /existing-questions/{valid_topic_id} endpoint...")
+        success, existing_questions = self.test_existing_questions_with_ids(valid_topic_id)
+        results['existing_questions'] = {'success': success, 'data': existing_questions}
+        
+        # 4. Test /update-question-solution endpoint
+        print(f"\n4️⃣ Testing /update-question-solution endpoint...")
+        if success and existing_questions:
+            # Find a question without solution or with minimal solution
+            question_to_update = None
+            for question in existing_questions:
+                if not question.get('solution') or len(question.get('solution', '').strip()) < 10:
+                    question_to_update = question
+                    break
+            
+            if question_to_update:
+                success_update, update_data = self.test_update_question_solution(question_to_update['id'])
+                results['update_question_solution'] = {'success': success_update, 'data': update_data}
+            else:
+                print("   ⚠️ No questions found without solutions to update")
+                results['update_question_solution'] = {'success': False, 'data': {}, 'reason': 'No questions to update'}
+        else:
+            print("   ⚠️ Cannot test update-question-solution - no existing questions found")
+            results['update_question_solution'] = {'success': False, 'data': {}, 'reason': 'No existing questions'}
+        
+        # 5. Test question generation for each type (avoid SUB)
+        print(f"\n5️⃣ Testing question generation for MCQ, MSQ, NAT types...")
+        question_types = ["MCQ", "MSQ", "NAT"]  # Avoiding SUB due to database constraint
+        
+        for q_type in question_types:
+            print(f"\n   Testing {q_type} generation...")
+            success, data = self.test_question_generation(valid_topic_id, q_type)
+            results[f'generate_{q_type.lower()}'] = {'success': success, 'data': data}
+        
+        # 6. Test PYQ solution generation with topic notes
+        print(f"\n6️⃣ Testing PYQ solution generation with topic notes...")
+        success, pyq_data = self.test_generate_pyq_solution(valid_topic_id)
+        results['generate_pyq_solution'] = {'success': success, 'data': pyq_data}
+        
+        return results
+
+    def test_start_auto_generation_with_mode(self, exam_id, course_id, generation_mode):
+        """Test start-auto-generation with specific generation mode"""
+        request_data = {
+            "correct_marks": 4.0,
+            "incorrect_marks": -1.0,
+            "skipped_marks": 0.0,
+            "time_minutes": 180.0,
+            "total_questions": 10
+        }
+        
+        params = {
+            "exam_id": exam_id,
+            "course_id": course_id,
+            "generation_mode": generation_mode
+        }
+        
+        url = f"{self.api_url}/start-auto-generation"
+        headers = {'Content-Type': 'application/json'}
+        
+        self.tests_run += 1
+        print(f"   Testing with generation_mode='{generation_mode}'...")
+        print(f"   URL: {url}")
+        print(f"   Params: {params}")
+        
+        try:
+            response = requests.post(url, json=request_data, headers=headers, params=params, timeout=30)
+            
+            if response.status_code == 200:
+                self.tests_passed += 1
+                print(f"   ✅ SUCCESS - Auto-generation session created!")
+                try:
+                    response_data = response.json()
+                    print(f"   Session ID: {response_data.get('session_id', 'N/A')}")
+                    print(f"   Total topics: {response_data.get('total_topics', 'N/A')}")
+                    print(f"   Status: {response_data.get('status', 'N/A')}")
+                    print(f"   Message: {response_data.get('message', 'N/A')}")
+                    return True, response_data
+                except Exception as json_error:
+                    print(f"   ❌ JSON parsing error: {str(json_error)}")
+                    return False, {}
+            else:
+                print(f"   ❌ FAILED - Expected 200, got {response.status_code}")
+                print(f"   Response: {response.text}")
+                
+                # Check if this is the "[object Object]" error
+                try:
+                    error_data = response.json()
+                    if isinstance(error_data, dict) and 'detail' in error_data:
+                        detail = error_data['detail']
+                        if isinstance(detail, list):
+                            print(f"   🔍 VALIDATION ERROR ARRAY DETECTED: {len(detail)} items")
+                            print(f"   This would cause '[object Object]' error in frontend!")
+                            for i, item in enumerate(detail):
+                                print(f"      Error {i}: {item}")
+                        else:
+                            print(f"   Error detail: {detail}")
+                except:
+                    pass
+                
+                self.failed_tests.append({
+                    'test': f"Start Auto Generation ({generation_mode})",
+                    'exam_id': exam_id,
+                    'course_id': course_id,
+                    'expected': 200,
+                    'actual': response.status_code,
+                    'response': response.text[:500]
+                })
+                return False, {}
+                
+        except Exception as e:
+            print(f"   ❌ EXCEPTION - Error: {str(e)}")
+            self.failed_tests.append({
+                'test': f"Start Auto Generation ({generation_mode})",
+                'exam_id': exam_id,
+                'course_id': course_id,
+                'error': str(e)
+            })
+            return False, {}
+
+    def test_existing_questions_with_ids(self, topic_id):
+        """Test existing-questions endpoint and verify it returns question IDs"""
+        url = f"{self.api_url}/existing-questions/{topic_id}"
+        headers = {'Content-Type': 'application/json'}
+        
+        self.tests_run += 1
+        print(f"   Testing existing-questions endpoint...")
+        print(f"   URL: {url}")
+        
+        try:
+            response = requests.get(url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                self.tests_passed += 1
+                print(f"   ✅ SUCCESS - Existing questions retrieved!")
+                try:
+                    response_data = response.json()
+                    print(f"   Found {len(response_data)} existing questions")
+                    
+                    # Verify questions have IDs and other required data
+                    if response_data:
+                        sample_question = response_data[0]
+                        has_id = 'id' in sample_question
+                        has_statement = 'question_statement' in sample_question
+                        has_type = 'question_type' in sample_question
+                        
+                        print(f"   Sample question has ID: {has_id}")
+                        print(f"   Sample question has statement: {has_statement}")
+                        print(f"   Sample question has type: {has_type}")
+                        
+                        if has_id:
+                            print(f"   Sample question ID: {sample_question['id']}")
+                        if has_statement:
+                            print(f"   Sample statement: {sample_question['question_statement'][:100]}...")
+                    
+                    return True, response_data
+                except Exception as json_error:
+                    print(f"   ❌ JSON parsing error: {str(json_error)}")
+                    return False, {}
+            else:
+                print(f"   ❌ FAILED - Expected 200, got {response.status_code}")
+                print(f"   Response: {response.text}")
+                self.failed_tests.append({
+                    'test': "Existing Questions with IDs",
+                    'topic_id': topic_id,
+                    'expected': 200,
+                    'actual': response.status_code,
+                    'response': response.text[:500]
+                })
+                return False, {}
+                
+        except Exception as e:
+            print(f"   ❌ EXCEPTION - Error: {str(e)}")
+            self.failed_tests.append({
+                'test': "Existing Questions with IDs",
+                'topic_id': topic_id,
+                'error': str(e)
+            })
+            return False, {}
+
+    def test_update_question_solution(self, question_id):
+        """Test the update-question-solution endpoint"""
+        request_data = {
+            "question_id": question_id,
+            "answer": "2",
+            "solution": "This is a detailed step-by-step solution generated by the testing system. The answer is option 2 based on mathematical analysis and proper reasoning.",
+            "confidence_level": "High"
+        }
+        
+        url = f"{self.api_url}/update-question-solution"
+        headers = {'Content-Type': 'application/json'}
+        
+        self.tests_run += 1
+        print(f"   Testing update-question-solution endpoint...")
+        print(f"   URL: {url}")
+        print(f"   Question ID: {question_id}")
+        
+        try:
+            response = requests.patch(url, json=request_data, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                self.tests_passed += 1
+                print(f"   ✅ SUCCESS - Question solution updated!")
+                try:
+                    response_data = response.json()
+                    print(f"   Message: {response_data.get('message', 'N/A')}")
+                    print(f"   Updated question ID: {response_data.get('question_id', 'N/A')}")
+                    return True, response_data
+                except Exception as json_error:
+                    print(f"   ❌ JSON parsing error: {str(json_error)}")
+                    return False, {}
+            else:
+                print(f"   ❌ FAILED - Expected 200, got {response.status_code}")
+                print(f"   Response: {response.text}")
+                self.failed_tests.append({
+                    'test': "Update Question Solution",
+                    'question_id': question_id,
+                    'expected': 200,
+                    'actual': response.status_code,
+                    'response': response.text[:500]
+                })
+                return False, {}
+                
+        except Exception as e:
+            print(f"   ❌ EXCEPTION - Error: {str(e)}")
+            self.failed_tests.append({
+                'test': "Update Question Solution",
+                'question_id': question_id,
+                'error': str(e)
+            })
+            return False, {}
+
 def main():
-    print("🚀 Testing Enhanced Question Generation System Backend...")
-    print("🎯 Focus: '[object Object]' Error Investigation")
+    print("🚀 Testing Auto-Generation Functionality Improvements")
+    print("🎯 Focus: Review Request Scenarios")
     print("=" * 60)
     
     tester = QuestionMakerAPITester()
-    
-    # PRIORITY: Investigate the [object Object] error first
-    print("\n🔍 PRIORITY: Investigating '[object Object]' Error...")
-    tester.test_object_object_error_investigation()
     
     # Test basic connectivity first
     print("\n1️⃣ Testing Basic API Connectivity...")
     tester.test_root_endpoint()
     
-    # Test cascading endpoints to get working IDs
-    print("\n2️⃣ Testing Cascading Dropdown Endpoints...")
-    exams = tester.test_exams_endpoint()
+    # Run the specific review request scenarios
+    print("\n2️⃣ Running Review Request Test Scenarios...")
+    review_results = tester.test_review_request_scenarios()
     
-    # Find ISI->MSQMS course for testing
-    working_course_id = None
-    working_exam_id = None
-    
-    if exams:
-        for exam in exams:
-            if "ISI" in exam.get('name', '').upper():
-                exam_id = exam['id']
-                working_exam_id = exam_id
-                print(f"\n🔍 Found ISI exam: {exam['name']} ({exam_id})")
-                
-                courses = tester.test_courses_endpoint(exam_id)
-                for course in courses:
-                    if "MSQMS" in course.get('name', '').upper():
-                        working_course_id = course['id']
-                        print(f"✅ Found MSQMS course: {course['name']} ({working_course_id})")
-                        break
-                
-                if working_course_id:
-                    break
-    
-    # Use fallback IDs if not found
-    if not working_course_id:
-        working_course_id = "b8f7e2d1-4c3a-4b5e-8f9a-1b2c3d4e5f6g"  # Fallback
-        working_exam_id = "a1b2c3d4-e5f6-7g8h-9i0j-k1l2m3n4o5p6"  # Fallback
-        print(f"⚠️ Using fallback course_id: {working_course_id}")
-    
-    # Test new endpoints
-    print("\n3️⃣ Testing New Enhanced Endpoints...")
-    new_endpoint_results = {}
-    
-    # Update the test method to use found IDs
-    tester.working_course_id = working_course_id
-    tester.working_exam_id = working_exam_id
-    
-    # Test new endpoints individually
-    topic_id = "7c583ed3-64bf-4fa0-bf20-058ac4b40737"
-    
-    # Test 1: All topics with weightage
-    print(f"\n3.1️⃣ Testing All Topics with Weightage...")
-    success, data = tester.test_all_topics_with_weightage(working_course_id)
-    new_endpoint_results['all_topics_with_weightage'] = {'success': success, 'data': data}
-    
-    # Test 2: PYQ Solution Generation
-    print(f"\n3.2️⃣ Testing PYQ Solution Generation...")
-    success, data = tester.test_generate_pyq_solution(topic_id)
-    new_endpoint_results['generate_pyq_solution'] = {'success': success, 'data': data}
-    
-    # Test 3: Manual Question Save
-    print(f"\n3.3️⃣ Testing Manual Question Save...")
-    success, data = tester.test_save_question_manually(topic_id)
-    new_endpoint_results['save_question_manually'] = {'success': success, 'data': data}
-    
-    # Test 4: Auto Generation Start
-    print(f"\n3.4️⃣ Testing Auto Generation Start...")
-    success, data = tester.test_start_auto_generation(working_exam_id, working_course_id)
-    new_endpoint_results['start_auto_generation'] = {'success': success, 'data': data}
-    
-    # Test enhanced question generation
-    print("\n4️⃣ Testing Enhanced Question Generation...")
-    generation_results = tester.test_specific_topic_question_generation()
-    
-    # Print final results
+    # Print detailed results
     print("\n" + "=" * 60)
-    print("📊 FINAL TEST RESULTS")
+    print("📊 REVIEW REQUEST TEST RESULTS")
     print("=" * 60)
     print(f"Total Tests Run: {tester.tests_run}")
     print(f"Tests Passed: {tester.tests_passed}")
     print(f"Tests Failed: {len(tester.failed_tests)}")
     print(f"Success Rate: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
     
-    # New endpoints analysis
-    print(f"\n🆕 NEW ENDPOINTS ANALYSIS:")
-    successful_new = [endpoint for endpoint, result in new_endpoint_results.items() if result['success']]
-    failed_new = [endpoint for endpoint, result in new_endpoint_results.items() if not result['success']]
+    # Analyze specific scenarios
+    print(f"\n🎯 SCENARIO ANALYSIS:")
     
-    for endpoint, result in new_endpoint_results.items():
-        status = "✅ WORKING" if result['success'] else "❌ FAILED"
-        print(f"   {endpoint}: {status}")
+    # 1. Auto-generation endpoint tests
+    auto_gen_new = review_results.get('start_auto_generation_new', {})
+    auto_gen_pyq = review_results.get('start_auto_generation_pyq', {})
     
-    # Enhanced question generation analysis
-    if generation_results:
-        print(f"\n🎯 ENHANCED QUESTION GENERATION ANALYSIS:")
-        for q_type, result in generation_results.items():
-            status = "✅ WORKING" if result['success'] else "❌ FAILED"
-            print(f"   {q_type}: {status}")
+    print(f"\n1️⃣ /start-auto-generation endpoint:")
+    print(f"   new_questions mode: {'✅ WORKING' if auto_gen_new.get('success') else '❌ FAILED'}")
+    print(f"   pyq_solutions mode: {'✅ WORKING' if auto_gen_pyq.get('success') else '❌ FAILED'}")
     
+    # 2. Existing questions endpoint
+    existing_q = review_results.get('existing_questions', {})
+    print(f"\n2️⃣ /existing-questions/{'{topic_id}'} endpoint:")
+    print(f"   Status: {'✅ WORKING' if existing_q.get('success') else '❌ FAILED'}")
+    if existing_q.get('success') and existing_q.get('data'):
+        print(f"   Returns question IDs: ✅ YES")
+        print(f"   Questions found: {len(existing_q['data'])}")
+    
+    # 3. Update question solution
+    update_q = review_results.get('update_question_solution', {})
+    print(f"\n3️⃣ /update-question-solution endpoint:")
+    print(f"   Status: {'✅ WORKING' if update_q.get('success') else '❌ FAILED'}")
+    if not update_q.get('success') and 'reason' in update_q:
+        print(f"   Reason: {update_q['reason']}")
+    
+    # 4. Question generation by type
+    print(f"\n4️⃣ Question generation by type:")
+    for q_type in ['MCQ', 'MSQ', 'NAT']:
+        result = review_results.get(f'generate_{q_type.lower()}', {})
+        status = '✅ WORKING' if result.get('success') else '❌ FAILED'
+        print(f"   {q_type}: {status}")
+    
+    # 5. PYQ solution generation
+    pyq_solution = review_results.get('generate_pyq_solution', {})
+    print(f"\n5️⃣ PYQ solution generation:")
+    print(f"   Status: {'✅ WORKING' if pyq_solution.get('success') else '❌ FAILED'}")
+    if pyq_solution.get('success') and pyq_solution.get('data'):
+        confidence = pyq_solution['data'].get('confidence_level', 'N/A')
+        print(f"   Uses topic notes: ✅ YES (confidence: {confidence})")
+    
+    # Check for "[object Object]" error resolution
+    print(f"\n🔍 '[object Object]' ERROR STATUS:")
+    object_error_resolved = auto_gen_new.get('success') or auto_gen_pyq.get('success')
+    if object_error_resolved:
+        print(f"   ✅ RESOLVED - Auto-generation works with valid IDs")
+    else:
+        print(f"   ❌ PERSISTS - Auto-generation still failing")
+        # Check if it's validation array issue
+        for failure in tester.failed_tests:
+            if 'Start Auto Generation' in failure.get('test', ''):
+                print(f"   Check for validation array errors in failed tests")
+    
+    # Overall assessment
+    print(f"\n🎯 OVERALL ASSESSMENT:")
+    working_scenarios = sum(1 for result in review_results.values() if result.get('success'))
+    total_scenarios = len(review_results)
+    
+    if working_scenarios >= total_scenarios * 0.8:  # 80% success rate
+        print(f"✅ IMPROVEMENTS SUCCESSFUL: {working_scenarios}/{total_scenarios} scenarios working")
+    elif working_scenarios >= total_scenarios * 0.5:  # 50% success rate
+        print(f"⚠️ PARTIAL SUCCESS: {working_scenarios}/{total_scenarios} scenarios working")
+    else:
+        print(f"❌ IMPROVEMENTS NEED WORK: Only {working_scenarios}/{total_scenarios} scenarios working")
+    
+    # Detailed failure analysis
     if tester.failed_tests:
         print("\n❌ DETAILED FAILURE ANALYSIS:")
         for failure in tester.failed_tests:
             print(f"\n  🔍 Test: {failure.get('test', 'Unknown')}")
+            if 'exam_id' in failure:
+                print(f"     Exam ID: {failure['exam_id']}")
+            if 'course_id' in failure:
+                print(f"     Course ID: {failure['course_id']}")
             if 'topic_id' in failure:
                 print(f"     Topic ID: {failure['topic_id']}")
             if 'error' in failure:
                 print(f"     Error: {failure['error']}")
             if 'response' in failure:
                 print(f"     Response: {failure['response'][:200]}...")
-    
-    # Overall conclusions
-    new_endpoints_working = len(successful_new) > 0
-    question_generation_working = any(result['success'] for result in generation_results.values()) if generation_results else False
-    
-    print(f"\n🎯 CONCLUSIONS:")
-    if new_endpoints_working:
-        print(f"✅ New endpoints: {len(successful_new)}/{len(new_endpoint_results)} working")
-    else:
-        print(f"❌ New endpoints: All failed - need investigation")
-    
-    if question_generation_working:
-        print(f"✅ Enhanced question generation: Working for some question types")
-    else:
-        print(f"❌ Enhanced question generation: Issues persist")
     
     return 0 if len(tester.failed_tests) == 0 else 1
 

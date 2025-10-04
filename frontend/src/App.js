@@ -282,10 +282,27 @@ function App() {
       console.error("Auto-generation error:", error);
       let errorMessage = "Unknown error occurred";
       
-      if (error.response?.data?.detail) {
-        errorMessage = error.response.data.detail;
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
+      // Handle different error response formats
+      if (error.response?.data) {
+        if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        } else if (error.response.data.detail) {
+          // Handle array of errors
+          if (Array.isArray(error.response.data.detail)) {
+            errorMessage = error.response.data.detail.map(err => 
+              typeof err === 'string' ? err : err.message || err.msg || JSON.stringify(err)
+            ).join(', ');
+          } else if (typeof error.response.data.detail === 'string') {
+            errorMessage = error.response.data.detail;
+          } else {
+            errorMessage = JSON.stringify(error.response.data.detail);
+          }
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else {
+          // Try to extract meaningful message from the object
+          errorMessage = JSON.stringify(error.response.data);
+        }
       } else if (error.message) {
         errorMessage = error.message;
       }

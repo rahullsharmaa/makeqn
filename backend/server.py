@@ -261,6 +261,18 @@ class GeneratedSolution(BaseModel):
     solution: str
     confidence_level: str
 
+class CoursePYQSolutionRequest(BaseModel):
+    course_id: str
+    
+class PYQSolutionProgress(BaseModel):
+    total_questions: int
+    processed_questions: int
+    successful_solutions: int
+    failed_solutions: int
+    current_question_id: Optional[str] = None
+    is_completed: bool = False
+    error_message: Optional[str] = None
+
 # API Routes
 
 @api_router.get("/")

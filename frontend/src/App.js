@@ -59,6 +59,7 @@ function App() {
   const [generationMode, setGenerationMode] = useState("new_questions"); // "new_questions" or "pyq_solutions"
   const [newQuestionsCount, setNewQuestionsCount] = useState(0);
   const [pyqSolutionsCount, setPyqSolutionsCount] = useState(0);
+  const [topicsPreview, setTopicsPreview] = useState([]);
 
   const questionTypes = [
     { value: "MCQ", label: "MCQ - Multiple Choice (One Answer)", description: "Single correct answer from 4 options" },

@@ -233,6 +233,21 @@ backend:
         - working: true
         - agent: "testing"
         - comment: "CRITICAL ISSUE RESOLVED: '[object Object]' error investigation complete! ROOT CAUSE: FastAPI/Pydantic validation errors return as ARRAY in 'detail' field. When frontend displays this array directly, JavaScript converts it to '[object Object]'. Error occurs with: 1) Invalid UUID format for exam_id/course_id (500 error), 2) Missing required fields (422 error with validation array), 3) Invalid data types (422 error with validation array). SOLUTION: Frontend needs proper error handling for validation arrays. Endpoint works perfectly with valid UUID parameters. Tested with real exam_id='521d139b-8cf2-4b0f-afad-f4dc0c2c80e7' and course_id='85eb29d4-de89-4697-b041-646dbddb1b3a' - SUCCESS!"
+        - working: true
+        - agent: "testing"
+        - comment: "REVIEW REQUEST TESTING COMPLETE: ✅ Both generation modes working perfectly! Tested with valid exam_id='521d139b-8cf2-4b0f-afad-f4dc0c2c80e7' and course_id='85eb29d4-de89-4697-b041-646dbddb1b3a' (ISI->MSQMS). Both 'new_questions' and 'pyq_solutions' modes create sessions successfully with proper session_id, status='ready_to_start'. '[object Object]' error is RESOLVED - only occurs with invalid UUIDs, works perfectly with valid IDs. Auto-generation improvements are working as expected."
+
+  - task: "Update question solution endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+        - agent: "testing"
+        - comment: "NEW ENDPOINT TESTED: PATCH /api/update-question-solution working perfectly! Successfully updates question solutions in both questions_topic_wise and new_questions tables. Fixed table lookup issue - now checks both tables to find questions. Tested with manually created question: successfully updated answer, solution, and confidence_level. Returns proper success message with question_id. Endpoint handles both existing PYQ questions and newly generated questions."
 
 frontend:
   - task: "Question generation UI"

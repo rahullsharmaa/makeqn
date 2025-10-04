@@ -306,8 +306,14 @@ function App() {
       
       toast.success("Auto-generation started!");
       
-      // Start the auto-generation process
-      await processAutoGeneration(topics, questionTypeToUse);
+      // Handle different generation modes
+      if (generationMode === "pyq_solutions") {
+        // For PYQ solutions, use the course-level generation
+        await processPYQSolutionGeneration(selectedCourse);
+      } else {
+        // For new questions, use the topic-level generation
+        await processAutoGeneration(topics, questionTypeToUse);
+      }
       
     } catch (error) {
       console.error("Auto-generation error:", error);

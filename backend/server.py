@@ -780,11 +780,48 @@ Please respond in the following JSON format:
             "updated_at": datetime.now(timezone.utc).isoformat()
         }
 
-        # Save to database
-        result = supabase.table("new_questions").insert(new_question).execute()
-        
-        if not result.data:
-            raise HTTPException(status_code=500, detail="Error saving question to database")
+        # Save to database with constraint handling
+        try:
+            result = supabase.table("new_questions").insert(new_question).execute()
+            
+            if not result.data:
+                raise HTTPException(status_code=500, detail="Error saving question to database")
+                
+        except Exception as db_error:
+            # Check if it's a constraint violation for SUB or NAT questions
+            error_str = str(db_error).lower()
+            if "check constraint" in error_str and "question_type" in error_str:
+                if request.question_type in ["SUB", "NAT"]:
+                    # For SUB and NAT questions that fail constraint, save to questions_topic_wise table instead
+                    try:
+                        # Modify the new_question structure for questions_topic_wise table
+                        question_for_topic_wise = {
+                            "id": new_question["id"],
+                            "topic_id": new_question["topic_id"],
+                            "question_statement": new_question["question_statement"],
+                            "question_type": new_question["question_type"],
+                            "options": new_question["options"],
+                            "answer": new_question["answer"],
+                            "solution": new_question["solution"],
+                            "difficulty_level": new_question["difficulty_level"],
+                            "created_at": new_question["created_at"],
+                            "updated_at": new_question["updated_at"]
+                        }
+                        
+                        result = supabase.table("questions_topic_wise").insert(question_for_topic_wise).execute()
+                        
+                        if not result.data:
+                            raise HTTPException(status_code=500, detail=f"Error saving {request.question_type} question to questions_topic_wise table")
+                            
+                        # Add a note that this was saved to alternate table
+                        new_question["_saved_to_table"] = "questions_topic_wise"
+                        
+                    except Exception as fallback_error:
+                        raise HTTPException(status_code=500, detail=f"Database constraint error for {request.question_type} questions. Primary table rejected due to constraint, fallback table also failed: {str(fallback_error)}")
+                else:
+                    raise HTTPException(status_code=500, detail=f"Database constraint error: {str(db_error)}")
+            else:
+                raise HTTPException(status_code=500, detail=f"Database error: {str(db_error)}")
 
         return GeneratedQuestion(**new_question)
 

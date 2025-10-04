@@ -1722,8 +1722,8 @@ class QuestionMakerAPITester:
             return False, {'exception': str(e)}
 
 def main():
-    print("🚀 Testing '[object Object]' Error Investigation")
-    print("🎯 Focus: Review Request - Auto-Generation Endpoint Error Analysis")
+    print("🚀 Testing Auto Question Generation Fix")
+    print("🎯 Focus: Review Request - camelCase to snake_case field transformation")
     print("=" * 60)
     
     tester = QuestionMakerAPITester()
@@ -1732,64 +1732,9 @@ def main():
     print("\n1️⃣ Testing Basic API Connectivity...")
     tester.test_root_endpoint()
     
-    # Run the specific '[object Object]' error investigation
-    print("\n2️⃣ Running '[object Object]' Error Investigation...")
-    object_error_results = tester.test_object_object_error_specific()
-    
-    # Print detailed analysis
-    print("\n" + "=" * 60)
-    print("📊 '[object Object]' ERROR INVESTIGATION RESULTS")
-    print("=" * 60)
-    
-    # Analyze valid scenarios
-    print(f"\n✅ VALID SCENARIOS:")
-    if object_error_results['valid_new_questions']['success']:
-        print(f"   generation_mode='new_questions': ✅ SUCCESS")
-        data = object_error_results['valid_new_questions']['data']
-        print(f"      Session ID: {data.get('session_id', 'N/A')}")
-        print(f"      Total Topics: {data.get('total_topics', 'N/A')}")
-        print(f"      Status: {data.get('status', 'N/A')}")
-    else:
-        print(f"   generation_mode='new_questions': ❌ FAILED")
-        
-    if object_error_results['valid_pyq_solutions']['success']:
-        print(f"   generation_mode='pyq_solutions': ✅ SUCCESS")
-        data = object_error_results['valid_pyq_solutions']['data']
-        print(f"      Session ID: {data.get('session_id', 'N/A')}")
-        print(f"      Total Topics: {data.get('total_topics', 'N/A')}")
-        print(f"      Status: {data.get('status', 'N/A')}")
-    else:
-        print(f"   generation_mode='pyq_solutions': ❌ FAILED")
-    
-    # Analyze invalid scenarios that cause '[object Object]'
-    print(f"\n❌ INVALID SCENARIOS (causing '[object Object]'):")
-    object_object_causes = []
-    
-    for scenario in object_error_results['invalid_scenarios']:
-        print(f"   {scenario['name']}: {'✅ HANDLED' if scenario['success'] else '❌ CAUSES ERROR'}")
-        if not scenario['success'] and 'error_response' in scenario['data']:
-            # Check if this would cause '[object Object]' in frontend
-            try:
-                import json
-                error_data = json.loads(scenario['data']['error_response'])
-                if isinstance(error_data, list) or (isinstance(error_data, dict) and isinstance(error_data.get('detail'), list)):
-                    object_object_causes.append(scenario['name'])
-                    print(f"      🚨 This would display '[object Object]' in frontend!")
-            except:
-                pass
-    
-    # Summary and recommendations
-    print(f"\n🎯 ROOT CAUSE ANALYSIS:")
-    if object_object_causes:
-        print(f"   '[object Object]' is caused by: {len(object_object_causes)} scenarios")
-        for cause in object_object_causes:
-            print(f"      - {cause}")
-        print(f"\n   💡 SOLUTION: Frontend needs to handle validation error arrays properly")
-        print(f"      When FastAPI returns validation errors, they come as arrays in 'detail' field")
-        print(f"      JavaScript displays arrays as '[object Object]' when converted to string")
-        print(f"      Frontend should iterate through error arrays and display individual messages")
-    else:
-        print(f"   No '[object Object]' errors detected in current tests")
+    # Run the specific camelCase to snake_case fix test
+    print("\n2️⃣ Running camelCase to snake_case Fix Test...")
+    results = tester.test_camelcase_snakecase_fix()
     
     # Print final summary
     print(f"\n📊 FINAL TEST SUMMARY:")
@@ -1798,19 +1743,29 @@ def main():
     print(f"   Tests Failed: {len(tester.failed_tests)}")
     print(f"   Success Rate: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
     
-    # Conclusion
-    valid_scenarios_working = (object_error_results['valid_new_questions']['success'] and 
-                              object_error_results['valid_pyq_solutions']['success'])
+    # Specific review request summary
+    print(f"\n🎯 REVIEW REQUEST TEST RESULTS:")
+    snake_case_working = results.get('new_questions_mode', {}).get('success', False) and \
+                       results.get('pyq_solutions_mode', {}).get('success', False)
     
-    if valid_scenarios_working:
-        print(f"\n✅ CONCLUSION: Auto-generation endpoint works correctly with valid parameters")
-        print(f"   '[object Object]' error only occurs with invalid input validation")
-        print(f"   Frontend should implement proper error handling for validation arrays")
+    if snake_case_working:
+        print(f"✅ AUTO-GENERATION FIX: WORKING CORRECTLY")
+        print(f"   - snake_case field validation working")
+        print(f"   - Both generation modes functional")
+        print(f"   - '[object Object]' error should be resolved")
+        print(f"   - Validation error about missing required fields resolved")
     else:
-        print(f"\n❌ CONCLUSION: Auto-generation endpoint has issues even with valid parameters")
-        print(f"   Need to investigate backend implementation further")
+        print(f"❌ AUTO-GENERATION FIX: ISSUES FOUND")
+        print(f"   - Validation errors still occurring")
+        print(f"   - '[object Object]' error may persist")
+        
+        # Show specific failures
+        if not results.get('new_questions_mode', {}).get('success', False):
+            print(f"   - 'new_questions' mode failing")
+        if not results.get('pyq_solutions_mode', {}).get('success', False):
+            print(f"   - 'pyq_solutions' mode failing")
     
-    return 0 if valid_scenarios_working else 1
+    return 0 if snake_case_working else 1
 
 if __name__ == "__main__":
     sys.exit(main())

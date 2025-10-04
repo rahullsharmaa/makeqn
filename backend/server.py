@@ -408,6 +408,9 @@ async def generate_pyq_solution(request: PYQSolutionRequest):
         chapter_result = supabase.table("chapters").select("*").eq("id", topic["chapter_id"]).execute()
         chapter = chapter_result.data[0] if chapter_result.data else {}
         
+        # Get topic notes for context (as requested by user)
+        topic_notes = topic.get('notes', '').strip()
+        
         # Create prompt for Gemini to solve the PYQ
         prompt = f"""
 You are an expert educator and question solver. Analyze the following previous year question and provide the correct answer and detailed solution.
@@ -416,6 +419,8 @@ Topic: {topic['name']}
 Chapter: {chapter.get('name', '')}
 Question Type: {request.question_type}
 
+{f'Topic Notes (Use these concepts and methods from the chapter): {topic_notes}' if topic_notes else ''}
+
 Question: {request.question_statement}
 
 {f'Options: {request.options}' if request.options else ''}
@@ -423,7 +428,8 @@ Question: {request.question_statement}
 Your task:
 1. Carefully analyze the question and determine the correct answer
 2. Provide a step-by-step solution explaining the reasoning
-3. Double-check your work to ensure accuracy
+3. Use the concepts from the topic notes provided above when solving
+4. Double-check your work to ensure accuracy
 
 Requirements:
 - For MCQ: Provide the correct option index (0-3)
@@ -434,7 +440,7 @@ Requirements:
 Respond in the following JSON format:
 {{
     "answer": "Your answer here (following the format rules above)",
-    "solution": "Detailed step-by-step solution with clear explanations",
+    "solution": "Detailed step-by-step solution with clear explanations using concepts from the topic notes",
     "confidence_level": "High/Medium/Low - your confidence in this solution"
 }}
 """

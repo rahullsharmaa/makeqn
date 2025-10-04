@@ -410,17 +410,38 @@ function App() {
     }
 
     // Distribute based on weightage
-    let remaining = totalQuestions;
-    const result = topics.map((topic, index) => {
-      if (index === topics.length - 1) {
-        // Last topic gets remaining questions
-        return { ...topic, estimated_questions: remaining };
+    let totalAllocated = 0;
+    const result = topics.map((topic) => {
+      const weightagePercent = topic.weightage || 0;
+      let topicQuestions;
+      
+      if (weightagePercent === 0) {
+        // If weightage is 0%, generate 1 question as per user requirement
+        topicQuestions = 1;
       } else {
-        const topicQuestions = Math.max(1, Math.round((topic.weightage || 0) / 100 * totalQuestions));
-        remaining -= topicQuestions;
-        return { ...topic, estimated_questions: topicQuestions };
+        // Calculate based on weightage percentage
+        topicQuestions = Math.round((weightagePercent / 100) * totalQuestions);
+        // Ensure at least 1 question per topic with weightage
+        topicQuestions = Math.max(1, topicQuestions);
       }
+      
+      totalAllocated += topicQuestions;
+      return { 
+        ...topic, 
+        estimated_questions: topicQuestions,
+        weightage_percent: weightagePercent 
+      };
     });
+
+    // Adjust if we allocated more/less than requested
+    const difference = totalQuestions - totalAllocated;
+    if (difference !== 0 && result.length > 0) {
+      // Add/remove questions from the topic with highest weightage
+      const maxWeightageIndex = result.reduce((maxIndex, topic, index) => 
+        topic.weightage_percent > result[maxIndex].weightage_percent ? index : maxIndex, 0);
+      result[maxWeightageIndex].estimated_questions = Math.max(1, 
+        result[maxWeightageIndex].estimated_questions + difference);
+    }
 
     return result;
   };

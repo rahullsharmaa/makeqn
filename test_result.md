@@ -143,9 +143,9 @@ backend:
 
   - task: "NAT validation fix"
     implemented: true
-    working: true
+    working: false
     file: "/app/backend/server.py"
-    stuck_count: 1
+    stuck_count: 2
     priority: "high"
     needs_retesting: false
     status_history:
@@ -158,6 +158,9 @@ backend:
         - working: true
         - agent: "testing"
         - comment: "RESOLVED: NAT question generation now working perfectly! Structured JSON output configuration resolved all JSON parsing issues. Generated NAT question about harmonic mean with proper numerical answer (6) and detailed solution. Validation logic correctly accepts numerical answers. The issue was indeed JSON parsing, not validation logic."
+        - working: false
+        - agent: "testing"
+        - comment: "REGRESSION DETECTED: NAT generation now has 0% success rate (0/3 attempts successful). All attempts fail with JSON parsing error 'Expecting property name enclosed in double quotes: line 1 column 2 (char 1)'. This indicates Gemini API is returning malformed JSON consistently for NAT questions. Previous success was temporary. Issue requires investigation into NAT-specific prompt or Gemini API behavior. Stuck count increased due to recurring failures."
 
   - task: "SUB database constraint fix"
     implemented: false

@@ -487,15 +487,28 @@ async def create_auto_generation_session(config: AutoGenerationConfig, exam_id: 
             for topic in topics:
                 topic.estimated_questions = questions_per_topic
         else:
-            # Distribute based on weightage
-            remaining_questions = config.total_questions
-            for i, topic in enumerate(topics):
-                if i == len(topics) - 1:  # Last topic gets remaining questions
-                    topic.estimated_questions = remaining_questions
+            # Distribute based on weightage using proper rounding
+            total_allocated = 0
+            topics_with_questions = []
+            
+            for topic in topics:
+                if topic.weightage and topic.weightage > 0:
+                    # Calculate questions based on exact weightage percentage with proper rounding
+                    topic_questions = max(1, round((topic.weightage / 100) * config.total_questions))
                 else:
-                    topic_questions = max(1, int((topic.weightage or 0) / 100 * config.total_questions))
-                    topic.estimated_questions = topic_questions
-                    remaining_questions -= topic_questions
+                    # Topics without weightage get minimum 1 question
+                    topic_questions = 1
+                
+                topic.estimated_questions = topic_questions
+                total_allocated += topic_questions
+                topics_with_questions.append(topic)
+            
+            # Adjust if total doesn't match exactly due to rounding
+            difference = config.total_questions - total_allocated
+            if difference != 0 and topics_with_questions:
+                # Find topic with highest weightage to adjust
+                max_weightage_topic = max(topics_with_questions, key=lambda t: t.weightage or 0)
+                max_weightage_topic.estimated_questions = max(1, max_weightage_topic.estimated_questions + difference)
         
         session_id = str(uuid.uuid4())
         session = AutoGenerationSession(

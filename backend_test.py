@@ -2386,9 +2386,10 @@ def main():
     print("\n1️⃣ Testing Basic API Connectivity...")
     tester.test_root_endpoint()
     
-    # Run the specific SUB question database constraint test
-    print("\n2️⃣ Running SUB Question Database Constraint Test...")
-    results = tester.test_sub_question_database_constraint()
+    # Run comprehensive PYQ solution generation testing as requested
+    print("\n2️⃣ Running Comprehensive PYQ Solution Generation Testing...")
+    pyq_results = tester.test_pyq_solution_generation_comprehensive()
+    pyq_analysis = tester.analyze_pyq_solution_results(pyq_results)
     
     # Print final summary
     print(f"\n📊 FINAL TEST SUMMARY:")
@@ -2398,37 +2399,38 @@ def main():
     print(f"   Success Rate: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
     
     # Specific review request summary
-    print(f"\n🎯 SUB QUESTION CONSTRAINT TEST RESULTS:")
+    print(f"\n🎯 PYQ SOLUTION GENERATION TEST RESULTS:")
+    print(f"   System Health: {pyq_analysis.get('system_health', 0):.1f}%")
+    print(f"   PYQ Solution Success Rate: {pyq_analysis.get('pyq_solution_success_rate', 0):.1f}%")
+    print(f"   JSON Parsing Errors: {pyq_analysis.get('json_parsing_errors', 0)}")
+    print(f"   Working Components: {len(pyq_analysis.get('working_components', []))}")
+    print(f"   Critical Issues: {len(pyq_analysis.get('critical_issues', []))}")
     
-    # Count working vs failing question types
-    working_count = sum(1 for q_type in ['mcq', 'msq', 'nat', 'sub'] 
-                       if results.get(f'{q_type}_test', {}).get('success', False))
+    # Show critical issues
+    critical_issues = pyq_analysis.get('critical_issues', [])
+    if critical_issues:
+        print(f"\n❌ CRITICAL ISSUES FOUND:")
+        for i, issue in enumerate(critical_issues, 1):
+            print(f"   {i}. {issue}")
     
-    sub_working = results.get('sub_test', {}).get('success', False)
+    # Show working components
+    working_components = pyq_analysis.get('working_components', [])
+    if working_components:
+        print(f"\n✅ WORKING COMPONENTS:")
+        for i, component in enumerate(working_components, 1):
+            print(f"   {i}. {component}")
     
-    print(f"   Working Question Types: {working_count}/4")
-    print(f"   SUB Question Generation: {'✅ WORKING' if sub_working else '❌ FAILING'}")
-    
-    if sub_working:
-        print(f"✅ SUB QUESTION ISSUE: RESOLVED")
-        print(f"   - Database constraint allows 'SUB' question type")
-        print(f"   - All 4 question types now working")
+    # Overall status
+    system_health = pyq_analysis.get('system_health', 0)
+    if system_health >= 80:
+        print(f"\n✅ PYQ SOLUTION SYSTEM: MOSTLY WORKING")
+        return 0
+    elif system_health >= 60:
+        print(f"\n⚠️ PYQ SOLUTION SYSTEM: PARTIALLY WORKING")
+        return 1
     else:
-        print(f"❌ SUB QUESTION ISSUE: CONFIRMED")
-        print(f"   - Database constraint rejects 'SUB' question type")
-        print(f"   - Need to update database schema")
-        print(f"   - Error: 'new_questions_question_type_check' constraint violation")
-        
-        # Show which types work
-        working_types = [q_type.upper() for q_type in ['mcq', 'msq', 'nat', 'sub'] 
-                        if results.get(f'{q_type}_test', {}).get('success', False)]
-        failing_types = [q_type.upper() for q_type in ['mcq', 'msq', 'nat', 'sub'] 
-                        if not results.get(f'{q_type}_test', {}).get('success', False)]
-        
-        print(f"   - Working types: {', '.join(working_types)}")
-        print(f"   - Failing types: {', '.join(failing_types)}")
-    
-    return 0 if sub_working else 1
+        print(f"\n❌ PYQ SOLUTION SYSTEM: NEEDS MAJOR FIXES")
+        return 2
 
 if __name__ == "__main__":
     sys.exit(main())

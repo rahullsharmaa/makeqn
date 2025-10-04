@@ -297,6 +297,9 @@ frontend:
         - working: true
         - agent: "testing"
         - comment: "RESOLVED: Database investigation reveals complete data hierarchy EXISTS! Found 347 complete topic paths. Working courses for frontend testing: ISI→MSQMS (9 subjects with full hierarchy), IIT JAM→Mathematical Statistics (2 subjects), IIT JAM→Economics (5 subjects). Frontend can now complete full cascading workflow. Previous 'empty arrays' issue was only for specific courses (CMI, CAT, most ISI/IIT JAM courses). Frontend UI is fully functional and ready for end-to-end testing with working data paths."
+        - working: true
+        - agent: "testing"
+        - comment: "🎯 AUTO-GENERATION FIX VERIFICATION COMPLETE! ✅ COMPREHENSIVE TESTING SUCCESSFUL! Tested complete auto-generation workflow with ISI→MSQMS. CRITICAL FIX VERIFIED: camelCase to snake_case transformation working perfectly - network monitoring shows correct JSON payload: {'correct_marks':4,'incorrect_marks':-1,'skipped_marks':0,'time_minutes':3,'total_questions':30}. ✅ NO validation errors - the specific error 'body.correct_marks: Field required; body.incorrect_marks: Field required; body.skipped_marks: Field required; body.time_minutes: Field required; body.total_questions: Field required' does NOT appear. ✅ Auto-generation starts successfully with progress indicators. ✅ Both 'new_questions' and 'pyq_solutions' modes work without validation errors. ✅ UI state management working (pause/stop/resume buttons). ✅ Topic Distribution Preview loads correctly (88 topics). The frontend camelCase to snake_case fix is COMPLETELY SUCCESSFUL - auto-generation now works as intended."
 
 metadata:
   created_by: "main_agent"

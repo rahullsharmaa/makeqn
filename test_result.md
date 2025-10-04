@@ -274,13 +274,16 @@ backend:
     implemented: true
     working: false
     file: "/app/backend/server.py"
-    stuck_count: 1
-    priority: "medium"
+    stuck_count: 2
+    priority: "high"
     needs_retesting: false
     status_history:
         - working: false
         - agent: "testing"
         - comment: "🎯 PYQ SOLUTION GENERATION INCONSISTENT: 33.3% success rate (1/3 attempts). Two attempts failed with 'Unterminated string starting at: line 3 column 15 (char 42)' JSON parsing error, while one attempt succeeded with proper JSON schema output. When successful, generates high-confidence solutions with proper answer format. The structured JSON output schema works but has intermittent parsing issues specific to PYQ solution generation. Need to investigate prompt complexity or response handling for PYQ solutions."
+        - working: false
+        - agent: "testing"
+        - comment: "🔍 COMPREHENSIVE PYQ SOLUTION TESTING COMPLETE: System health 60% - PARTIALLY WORKING. ROOT CAUSE IDENTIFIED: Gemini API quota exhaustion (429 errors) preventing proper testing of JSON parsing issues. CONFIRMED WORKING: ✅ GET /api/existing-questions (retrieves PYQ questions), ✅ PATCH /api/update-question-solution (saves solutions to questions_topic_wise table), ✅ Data saving to new_questions table, ✅ Manual question creation. CRITICAL ISSUES: ❌ All Gemini-dependent endpoints fail with quota exceeded (200 requests/day limit reached), ❌ Cannot test actual JSON parsing errors due to API limitations. RECOMMENDATION: Need valid Gemini API keys with higher quotas to properly test the 33.3% success rate issue and JSON parsing errors. Current round-robin system correctly identifies and marks failed keys."
 
 frontend:
   - task: "Question generation UI"

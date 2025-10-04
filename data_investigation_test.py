@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 
 class DataInvestigationTester:
-    def __init__(self, base_url="https://quizgen-ai-2.preview.emergentagent.com"):
+    def __init__(self, base_url="https://qgen-fix.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         

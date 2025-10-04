@@ -271,7 +271,7 @@ async def get_slots(course_id: str):
 async def get_existing_questions(topic_id: str):
     """Get existing questions for a topic for reference"""
     try:
-        result = supabase.table("questions_topic_wise").select("question_statement, options, answer, solution, question_type").eq("topic_id", topic_id).limit(5).execute()
+        result = supabase.table("questions_topic_wise").select("id, question_statement, options, answer, solution, question_type").eq("topic_id", topic_id).limit(10).execute()
         return result.data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching existing questions: {str(e)}")

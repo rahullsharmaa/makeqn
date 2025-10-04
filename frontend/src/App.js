@@ -397,13 +397,9 @@ function App() {
               await generateQuestionForTopic(topicInfo.id, currentQuestionType);
               console.log(`Generated ${currentQuestionType} question for topic: ${topicInfo.name}`);
             } else {
-              // Generate PYQ solutions
-              const result = await generatePYQSolutionForTopic(topicInfo.id);
-              if (result === null) {
-                // No questions to process for this topic, skip
-                success = true;
-                continue;
-              }
+              // For PYQ solutions mode, we'll process all at once at the course level
+              // This is handled separately in startPYQSolutionGeneration
+              success = true;
             }
             
             success = true;

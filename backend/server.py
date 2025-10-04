@@ -897,7 +897,7 @@ async def generate_course_pyq_solutions(request: CoursePYQSolutionRequest):
                         question['topic_notes'] = topic_info.get('notes', '')
                         all_questions.append(question)
             
-        except Exception as e:
+        except Exception:
             # Fallback approach if RPC doesn't exist
             # Get all questions for the course topics
             all_questions = []

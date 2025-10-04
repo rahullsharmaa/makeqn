@@ -944,6 +944,45 @@ class QuestionMakerAPITester:
             })
             return False, {}
 
+    def test_update_solution_with_created_question(self):
+        """Create a question manually and then test updating its solution"""
+        print("   Creating a test question to update its solution...")
+        
+        # First, create a question manually with minimal solution
+        topic_id = "7c583ed3-64bf-4fa0-bf20-058ac4b40737"
+        
+        request_data = {
+            "topic_id": topic_id,
+            "topic_name": "Harmonic Progression (HP)",
+            "question_statement": "What is the harmonic mean of 2 and 8?",
+            "question_type": "MCQ",
+            "options": ["3", "3.2", "4", "4.5"],
+            "answer": "1",
+            "solution": "Basic solution",  # Minimal solution to be updated
+            "difficulty_level": "Easy"
+        }
+        
+        # Save the question
+        success, save_data = self.test_save_question_manually(topic_id)
+        
+        if success and save_data:
+            question_id = save_data.get('question_id')
+            print(f"   ✅ Created test question with ID: {question_id}")
+            
+            # Now test updating its solution
+            print(f"   Testing update-question-solution with created question...")
+            success_update, update_data = self.test_update_question_solution(question_id)
+            
+            if success_update:
+                print(f"   ✅ Successfully updated question solution!")
+                return True
+            else:
+                print(f"   ❌ Failed to update question solution")
+                return False
+        else:
+            print(f"   ❌ Failed to create test question for update testing")
+            return False
+
 def main():
     print("🚀 Testing Auto-Generation Functionality Improvements")
     print("🎯 Focus: Review Request Scenarios")

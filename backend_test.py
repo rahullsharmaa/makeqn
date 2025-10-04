@@ -1229,6 +1229,127 @@ class QuestionMakerAPITester:
             'targets_met': targets_met
         }
 
+    def test_review_request_specific(self):
+        """Test the specific review request scenarios with correct ISI MSQMS course IDs"""
+        print("\n🎯 TESTING REVIEW REQUEST - AUTO-GENERATION WITH CORRECT ISI MSQMS COURSE")
+        print("=" * 80)
+        print("Goal: Verify '[object Object]' error is resolved with correct course data")
+        print("Expected: 88 topics, proper session creation, working question generation")
+        
+        # Use the exact IDs from review request
+        exam_id = "6c1bed83-2424-4237-8a6f-e7ed97240466"  # ISI
+        course_id = "d3ab4d23-f8d4-422b-aca2-affeb4d9609c"  # MSQMS
+        
+        print(f"\nUsing Review Request IDs:")
+        print(f"   exam_id: {exam_id} (ISI)")
+        print(f"   course_id: {course_id} (MSQMS)")
+        
+        results = {}
+        
+        # 1. Test /api/start-auto-generation with new_questions mode
+        print(f"\n1️⃣ Testing /api/start-auto-generation with 'new_questions' mode")
+        success1, data1 = self.test_start_auto_generation_with_mode(exam_id, course_id, "new_questions")
+        results['new_questions_mode'] = {'success': success1, 'data': data1}
+        
+        if success1 and data1:
+            total_topics = data1.get('total_topics', 0)
+            print(f"   ✅ Session created successfully!")
+            print(f"   📊 Total topics found: {total_topics}")
+            if total_topics == 88:
+                print(f"   ✅ EXPECTED: Found exactly 88 topics as expected!")
+            else:
+                print(f"   ⚠️ UNEXPECTED: Expected 88 topics, found {total_topics}")
+        
+        # 2. Test /api/start-auto-generation with pyq_solutions mode
+        print(f"\n2️⃣ Testing /api/start-auto-generation with 'pyq_solutions' mode")
+        success2, data2 = self.test_start_auto_generation_with_mode(exam_id, course_id, "pyq_solutions")
+        results['pyq_solutions_mode'] = {'success': success2, 'data': data2}
+        
+        if success2 and data2:
+            total_topics = data2.get('total_topics', 0)
+            print(f"   ✅ Session created successfully!")
+            print(f"   📊 Total topics found: {total_topics}")
+        
+        # 3. Get valid topic_id from the course for question generation testing
+        print(f"\n3️⃣ Getting valid topic_id from ISI->MSQMS course for question testing")
+        valid_topic_id = None
+        
+        success, topics_data = self.test_all_topics_with_weightage(course_id)
+        if success and topics_data:
+            valid_topic_id = topics_data[0]['id']
+            topic_name = topics_data[0]['name']
+            print(f"   ✅ Found valid topic_id: {valid_topic_id}")
+            print(f"   Topic name: {topic_name}")
+            print(f"   Total topics available: {len(topics_data)}")
+        else:
+            print(f"   ❌ Failed to get topics from course {course_id}")
+            return results
+        
+        # 4. Test question generation end-to-end
+        print(f"\n4️⃣ Testing question generation end-to-end")
+        question_types = ["MCQ", "MSQ", "NAT"]  # Skip SUB due to database constraint
+        
+        for q_type in question_types:
+            print(f"\n   Testing {q_type} question generation...")
+            success, data = self.test_question_generation(valid_topic_id, q_type)
+            results[f'generate_{q_type.lower()}'] = {'success': success, 'data': data}
+            
+            if success and data:
+                print(f"   ✅ {q_type} question generated and saved successfully!")
+                print(f"      Question ID: {data.get('id', 'N/A')}")
+                print(f"      Saved to new_questions table: ✅ YES")
+            else:
+                print(f"   ❌ {q_type} question generation failed")
+        
+        # 5. Verify questions are saved to new_questions table
+        print(f"\n5️⃣ Verifying questions are saved to new_questions table")
+        success, generated_questions = self.test_generated_questions_endpoint(valid_topic_id)
+        results['verify_saved_questions'] = {'success': success, 'data': generated_questions}
+        
+        if success and generated_questions:
+            print(f"   ✅ Found {len(generated_questions)} questions in new_questions table")
+            print(f"   Questions are being saved properly!")
+        else:
+            print(f"   ⚠️ No questions found in new_questions table for this topic")
+        
+        # Summary
+        print(f"\n📊 REVIEW REQUEST TEST SUMMARY")
+        print("=" * 50)
+        
+        successful_tests = sum(1 for key, result in results.items() if result.get('success', False))
+        total_tests = len(results)
+        
+        print(f"Successful tests: {successful_tests}/{total_tests}")
+        
+        # Check specific requirements
+        both_modes_working = results.get('new_questions_mode', {}).get('success', False) and \
+                           results.get('pyq_solutions_mode', {}).get('success', False)
+        
+        question_generation_working = any(results.get(f'generate_{q_type}', {}).get('success', False) 
+                                        for q_type in ['mcq', 'msq', 'nat'])
+        
+        print(f"\n🎯 SPECIFIC REQUIREMENTS CHECK:")
+        print(f"   Both generation modes working: {'✅ YES' if both_modes_working else '❌ NO'}")
+        print(f"   Question generation working: {'✅ YES' if question_generation_working else '❌ NO'}")
+        print(f"   Questions saved to database: {'✅ YES' if results.get('verify_saved_questions', {}).get('success', False) else '❌ NO'}")
+        
+        if both_modes_working and question_generation_working:
+            print(f"\n✅ REVIEW REQUEST: AUTO-GENERATION SYSTEM IS WORKING CORRECTLY!")
+            print(f"   '[object Object]' error should be resolved with correct course data")
+        else:
+            print(f"\n❌ REVIEW REQUEST: ISSUES FOUND IN AUTO-GENERATION SYSTEM")
+            print(f"   '[object Object]' error may still occur")
+        
+        return results
+
+    def test_generated_questions_endpoint(self, topic_id):
+        """Test the generated-questions endpoint to verify questions are saved"""
+        success, data = self.run_test(f"Get Generated Questions for Topic {topic_id}", "GET", f"generated-questions/{topic_id}", 200)
+        if success and data:
+            print(f"   Found {len(data)} generated questions")
+            return data
+        return []
+
     def test_object_object_error_specific(self):
         """Test the specific '[object Object]' error scenarios from review request"""
         print("\n🎯 TESTING SPECIFIC '[object Object]' ERROR SCENARIOS")

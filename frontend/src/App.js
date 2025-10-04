@@ -574,6 +574,57 @@ function App() {
     }
   };
 
+  const processPYQSolutionGeneration = async (courseId) => {
+    try {
+      console.log(`Processing PYQ solution generation for course: ${courseId}`);
+      
+      setAutoProgress(prev => ({
+        ...prev,
+        currentTopic: "Generating solutions for all PYQ questions in the course...",
+        percentage: 0
+      }));
+
+      // Call the course-level PYQ solution generation
+      const progress = await generateCoursePYQSolutions(courseId);
+      
+      // Update progress
+      setAutoProgress(prev => ({
+        ...prev,
+        generated: progress.successful_solutions,
+        total: progress.total_questions,
+        currentTopic: `PYQ Solution Generation Complete`,
+        percentage: 100
+      }));
+
+      // Show completion message
+      let message = `PYQ Solution Generation Complete!\n`;
+      message += `✅ ${progress.successful_solutions} solutions generated successfully\n`;
+      if (progress.failed_solutions > 0) {
+        message += `❌ ${progress.failed_solutions} solutions failed\n`;
+      }
+      message += `📊 Processed ${progress.total_questions} total questions`;
+
+      toast.success(message);
+      
+      setIsAutoGenerating(false);
+      
+      console.log("PYQ Solution Generation finished:", progress);
+      
+    } catch (error) {
+      console.error('Error in PYQ solution generation process:', error);
+      
+      let errorMessage = "Failed to generate PYQ solutions";
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(`PYQ Solution Generation Error: ${errorMessage}`);
+      setIsAutoGenerating(false);
+    }
+  };
+
   const pauseAutoGeneration = () => {
     setIsPaused(true);
     toast.info("Auto-generation paused. You can resume anytime.");

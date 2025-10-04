@@ -88,6 +88,7 @@ function App() {
       const response = await axios.get(`${API}/courses/${examId}`);
       setCourses(response.data);
       resetSelections(['course', 'subject', 'unit', 'chapter', 'topic']);
+      setTopicsPreview([]); // Clear topics preview when exam changes
     } catch (error) {
       toast.error("Failed to load courses");
     }

@@ -929,34 +929,11 @@ Please respond in the following JSON format:
             # Get response text
             response_text = response.text.strip()
             
-            # Since we're using structured output (application/json), 
-            # the response should be valid JSON directly
-            try:
-                generated_data = json.loads(response_text)
-            except json.JSONDecodeError:
-                # Fallback: try to extract and clean JSON manually
-                import re
-                
-                # Remove control characters
-                cleaned_text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', response_text)
-                
-                # Find JSON object bounds
-                start_idx = cleaned_text.find('{')
-                end_idx = cleaned_text.rfind('}') + 1
-                
-                if start_idx == -1 or end_idx == 0:
-                    raise ValueError(f"No JSON found in response. Raw response: {response_text[:200]}...")
-                
-                json_str = cleaned_text[start_idx:end_idx]
-                
-                # Try to fix common JSON formatting issues
-                json_str = json_str.replace('\n', '\\n').replace('\t', '\\t').replace('\r', '\\r')
-                
-                # Try parsing again
-                generated_data = json.loads(json_str)
+            # Use robust JSON parsing for consistent handling
+            generated_data = robust_parse_json(response_text)
             
-        except (json.JSONDecodeError, ValueError) as e:
-            raise HTTPException(status_code=500, detail=f"Error parsing AI response: {str(e)}")
+        except HTTPException:
+            raise
 
         # Handle case where Gemini returns an array instead of a single object
         if isinstance(generated_data, list):

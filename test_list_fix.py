@@ -8,7 +8,7 @@ import sys
 
 def test_list_fix():
     """Test the specific fix for list/get attribute error"""
-    base_url = "https://qgen-fix.preview.emergentagent.com"
+    base_url = "https://pyq-solution-gen.preview.emergentagent.com"
     api_url = f"{base_url}/api"
     
     # Known working topic_id from previous tests

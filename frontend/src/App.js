@@ -551,13 +551,6 @@ function App() {
     }
   };
 
-  const stopAutoGeneration = () => {
-    setIsPaused(true);
-    setIsAutoGenerating(false);
-    setAutoProgress({ generated: 0, total: 0, currentTopic: null, percentage: 0 });
-    toast.info("Auto-generation stopped.");
-  };
-
   const renderOptions = (options, answer, questionType) => {
     if (!options) return null;
 

@@ -959,6 +959,10 @@ def main():
     print("\n2️⃣ Running Review Request Test Scenarios...")
     review_results = tester.test_review_request_scenarios()
     
+    # Additional test: Try to create a question manually to test update-question-solution
+    print("\n3️⃣ Testing Update Question Solution with Created Question...")
+    tester.test_update_solution_with_created_question()
+    
     # Print detailed results
     print("\n" + "=" * 60)
     print("📊 REVIEW REQUEST TEST RESULTS")

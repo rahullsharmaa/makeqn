@@ -1926,9 +1926,458 @@ class QuestionMakerAPITester:
         print(f"   Current allowed values appear to be: {', '.join(working_types)}")
         print(f"   Required change: Add 'SUB' to the allowed values list")
 
+    def test_pyq_solution_generation_comprehensive(self):
+        """Comprehensive testing of PYQ solution generation system as requested"""
+        print("\n🎯 COMPREHENSIVE PYQ SOLUTION GENERATION TESTING")
+        print("=" * 80)
+        print("Focus: Test PYQ solution generation system with 33.3% success rate issues")
+        print("Endpoints: /existing-questions, /generate-pyq-solution, /generate-pyq-solution-by-id, /update-question-solution")
+        print("Known Issues: JSON parsing errors, data saving issues, intermittent failures")
+        
+        # Use the specific topic_id from previous tests
+        topic_id = "7c583ed3-64bf-4fa0-bf20-058ac4b40737"
+        
+        results = {
+            'existing_questions_tests': [],
+            'generate_pyq_solution_tests': [],
+            'generate_pyq_solution_by_id_tests': [],
+            'update_question_solution_tests': [],
+            'generate_question_tests': [],
+            'data_saving_tests': []
+        }
+        
+        # 1. Test GET /api/existing-questions/{topic_id}
+        print(f"\n1️⃣ Testing GET /api/existing-questions/{topic_id}")
+        print("   Purpose: Get PYQ questions from questions_topic_wise table")
+        
+        success, existing_questions = self.test_existing_questions_with_ids(topic_id)
+        results['existing_questions_tests'].append({
+            'success': success,
+            'data': existing_questions,
+            'count': len(existing_questions) if existing_questions else 0
+        })
+        
+        if success and existing_questions:
+            print(f"   ✅ Found {len(existing_questions)} existing PYQ questions")
+            sample_question = existing_questions[0]
+            print(f"   Sample question ID: {sample_question.get('id', 'N/A')}")
+            print(f"   Sample statement: {sample_question.get('question_statement', '')[:100]}...")
+            print(f"   Has solution: {'YES' if sample_question.get('solution') else 'NO'}")
+        else:
+            print(f"   ❌ Failed to retrieve existing questions")
+        
+        # 2. Test POST /api/generate-pyq-solution (multiple attempts to identify 33.3% success rate)
+        print(f"\n2️⃣ Testing POST /api/generate-pyq-solution (Multiple attempts)")
+        print("   Purpose: Generate solutions for PYQ questions - currently 33.3% success rate")
+        print("   Known Issue: 'Unterminated string starting at: line 3 column 15' JSON parsing errors")
+        
+        pyq_successes = 0
+        pyq_json_errors = 0
+        pyq_other_errors = 0
+        
+        for i in range(6):  # Test 6 times to get better statistics
+            print(f"\n   PYQ Solution Attempt {i+1}/6:")
+            success, data = self.test_generate_pyq_solution_detailed(topic_id, i+1)
+            
+            if success:
+                pyq_successes += 1
+                print(f"   ✅ Attempt {i+1}: SUCCESS")
+                if data:
+                    print(f"      Answer: {data.get('answer', 'N/A')}")
+                    print(f"      Confidence: {data.get('confidence_level', 'N/A')}")
+                    print(f"      Solution length: {len(data.get('solution', ''))}")
+            else:
+                # Check if it's a JSON parsing error
+                if 'json' in str(data).lower() or 'parsing' in str(data).lower():
+                    pyq_json_errors += 1
+                    print(f"   ❌ Attempt {i+1}: JSON PARSING ERROR")
+                else:
+                    pyq_other_errors += 1
+                    print(f"   ❌ Attempt {i+1}: OTHER ERROR")
+            
+            results['generate_pyq_solution_tests'].append({
+                'attempt': i+1,
+                'success': success,
+                'data': data
+            })
+        
+        pyq_success_rate = (pyq_successes / 6) * 100
+        print(f"\n   📊 PYQ Solution Generation Results:")
+        print(f"      Success Rate: {pyq_success_rate:.1f}% ({pyq_successes}/6)")
+        print(f"      JSON Parsing Errors: {pyq_json_errors}/6")
+        print(f"      Other Errors: {pyq_other_errors}/6")
+        print(f"      Expected: ~33.3% success rate")
+        print(f"      Status: {'✅ MATCHES EXPECTED' if 20 <= pyq_success_rate <= 50 else '⚠️ DIFFERENT FROM EXPECTED'}")
+        
+        # 3. Test POST /api/generate-pyq-solution-by-id (if we have existing questions)
+        print(f"\n3️⃣ Testing POST /api/generate-pyq-solution-by-id")
+        print("   Purpose: Generate solutions for existing PYQ questions by ID")
+        
+        if existing_questions:
+            # Test with first few existing questions
+            for i, question in enumerate(existing_questions[:3]):
+                question_id = question.get('id')
+                print(f"\n   Testing with question ID: {question_id}")
+                print(f"   Question: {question.get('question_statement', '')[:80]}...")
+                
+                success, data = self.test_generate_pyq_solution_by_id_detailed(question_id, i+1)
+                results['generate_pyq_solution_by_id_tests'].append({
+                    'question_id': question_id,
+                    'success': success,
+                    'data': data
+                })
+                
+                if success:
+                    print(f"   ✅ Generated solution successfully")
+                    if data:
+                        print(f"      Answer: {data.get('answer', 'N/A')}")
+                        print(f"      Confidence: {data.get('confidence_level', 'N/A')}")
+                else:
+                    print(f"   ❌ Failed to generate solution")
+        else:
+            print("   ⚠️ No existing questions found - skipping this test")
+        
+        # 4. Test PATCH /api/update-question-solution
+        print(f"\n4️⃣ Testing PATCH /api/update-question-solution")
+        print("   Purpose: Save generated solutions back to questions_topic_wise table")
+        
+        if existing_questions:
+            # Find a question to update
+            question_to_update = existing_questions[0]
+            question_id = question_to_update.get('id')
+            
+            print(f"   Testing with question ID: {question_id}")
+            success, data = self.test_update_question_solution_detailed(question_id)
+            results['update_question_solution_tests'].append({
+                'question_id': question_id,
+                'success': success,
+                'data': data
+            })
+            
+            if success:
+                print(f"   ✅ Successfully updated question solution")
+                print(f"   ✅ Data saving to questions_topic_wise table: WORKING")
+            else:
+                print(f"   ❌ Failed to update question solution")
+                print(f"   ❌ Data saving to questions_topic_wise table: FAILED")
+        else:
+            print("   ⚠️ No existing questions found - testing with manually created question")
+            # Create a test question and then update it
+            success = self.test_update_solution_with_created_question()
+            results['update_question_solution_tests'].append({
+                'question_id': 'created_question',
+                'success': success,
+                'data': {}
+            })
+        
+        # 5. Test POST /api/generate-question for new question generation
+        print(f"\n5️⃣ Testing POST /api/generate-question")
+        print("   Purpose: Generate new questions and verify saving to new_questions table")
+        
+        question_types = ["MCQ", "MSQ", "NAT"]  # Avoid SUB due to database constraint
+        
+        for q_type in question_types:
+            print(f"\n   Testing {q_type} question generation...")
+            success, data = self.test_question_generation_detailed(topic_id, q_type)
+            results['generate_question_tests'].append({
+                'question_type': q_type,
+                'success': success,
+                'data': data
+            })
+            
+            if success:
+                print(f"   ✅ {q_type} question generated and saved to new_questions table")
+                if data:
+                    print(f"      Question ID: {data.get('id', 'N/A')}")
+                    print(f"      Statement: {data.get('question_statement', '')[:80]}...")
+            else:
+                print(f"   ❌ {q_type} question generation failed")
+        
+        # 6. Test data saving verification
+        print(f"\n6️⃣ Testing Data Saving Verification")
+        print("   Purpose: Verify questions are properly saved to both tables")
+        
+        # Test retrieving generated questions
+        success, generated_questions = self.test_generated_questions_endpoint(topic_id)
+        results['data_saving_tests'].append({
+            'test': 'retrieve_generated_questions',
+            'success': success,
+            'count': len(generated_questions) if generated_questions else 0
+        })
+        
+        if success and generated_questions:
+            print(f"   ✅ Found {len(generated_questions)} generated questions in new_questions table")
+            print(f"   ✅ Data saving to new_questions table: WORKING")
+        else:
+            print(f"   ❌ No generated questions found in new_questions table")
+            print(f"   ❌ Data saving to new_questions table: ISSUE")
+        
+        return results
+    
+    def test_generate_pyq_solution_detailed(self, topic_id, attempt_num):
+        """Detailed test of PYQ solution generation with error analysis"""
+        request_data = {
+            "topic_id": topic_id,
+            "question_statement": f"Find the harmonic mean of 4, 6, and 12. (Attempt {attempt_num})",
+            "options": ["6", "6.4", "7.2", "8"],
+            "question_type": "MCQ"
+        }
+        
+        url = f"{self.api_url}/generate-pyq-solution"
+        headers = {'Content-Type': 'application/json'}
+        
+        try:
+            response = requests.post(url, json=request_data, headers=headers, timeout=60)
+            
+            if response.status_code == 200:
+                try:
+                    response_data = response.json()
+                    return True, response_data
+                except json.JSONDecodeError as e:
+                    print(f"      JSON Parsing Error: {str(e)}")
+                    print(f"      Raw Response: {response.text[:200]}...")
+                    return False, {'error': 'json_parsing', 'details': str(e)}
+            else:
+                print(f"      HTTP Error: {response.status_code}")
+                print(f"      Response: {response.text[:200]}...")
+                return False, {'error': 'http_error', 'status': response.status_code}
+                
+        except Exception as e:
+            print(f"      Exception: {str(e)}")
+            return False, {'error': 'exception', 'details': str(e)}
+    
+    def test_generate_pyq_solution_by_id_detailed(self, question_id, attempt_num):
+        """Detailed test of PYQ solution generation by ID"""
+        request_data = {
+            "question_id": question_id
+        }
+        
+        url = f"{self.api_url}/generate-pyq-solution-by-id"
+        headers = {'Content-Type': 'application/json'}
+        
+        try:
+            response = requests.post(url, json=request_data, headers=headers, timeout=60)
+            
+            if response.status_code == 200:
+                try:
+                    response_data = response.json()
+                    return True, response_data
+                except json.JSONDecodeError as e:
+                    print(f"      JSON Parsing Error: {str(e)}")
+                    return False, {'error': 'json_parsing', 'details': str(e)}
+            else:
+                print(f"      HTTP Error: {response.status_code}")
+                print(f"      Response: {response.text[:200]}...")
+                return False, {'error': 'http_error', 'status': response.status_code}
+                
+        except Exception as e:
+            print(f"      Exception: {str(e)}")
+            return False, {'error': 'exception', 'details': str(e)}
+    
+    def test_update_question_solution_detailed(self, question_id):
+        """Detailed test of question solution update"""
+        request_data = {
+            "question_id": question_id,
+            "answer": "1",
+            "solution": "To find the harmonic mean of numbers a, b, c: HM = 3/(1/a + 1/b + 1/c). For 4, 6, 12: HM = 3/(1/4 + 1/6 + 1/12) = 3/(3/12 + 2/12 + 1/12) = 3/(6/12) = 3/(1/2) = 6. The answer is option 1 (6).",
+            "confidence_level": "High"
+        }
+        
+        url = f"{self.api_url}/update-question-solution"
+        headers = {'Content-Type': 'application/json'}
+        
+        try:
+            response = requests.patch(url, json=request_data, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                try:
+                    response_data = response.json()
+                    return True, response_data
+                except json.JSONDecodeError as e:
+                    print(f"      JSON Parsing Error: {str(e)}")
+                    return False, {'error': 'json_parsing', 'details': str(e)}
+            else:
+                print(f"      HTTP Error: {response.status_code}")
+                print(f"      Response: {response.text[:200]}...")
+                return False, {'error': 'http_error', 'status': response.status_code}
+                
+        except Exception as e:
+            print(f"      Exception: {str(e)}")
+            return False, {'error': 'exception', 'details': str(e)}
+    
+    def test_generated_questions_endpoint(self, topic_id):
+        """Test the generated questions endpoint to verify data saving"""
+        url = f"{self.api_url}/generated-questions/{topic_id}"
+        headers = {'Content-Type': 'application/json'}
+        
+        try:
+            response = requests.get(url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                try:
+                    response_data = response.json()
+                    return True, response_data
+                except json.JSONDecodeError as e:
+                    return False, []
+            else:
+                return False, []
+                
+        except Exception as e:
+            return False, []
+    
+    def analyze_pyq_solution_results(self, results):
+        """Analyze the comprehensive PYQ solution generation test results"""
+        print(f"\n📊 COMPREHENSIVE PYQ SOLUTION GENERATION ANALYSIS")
+        print("=" * 80)
+        
+        # Use the topic_id for display
+        topic_id = "7c583ed3-64bf-4fa0-bf20-058ac4b40737"
+        
+        # 1. Existing Questions Analysis
+        existing_tests = results.get('existing_questions_tests', [])
+        existing_success = any(test['success'] for test in existing_tests)
+        existing_count = sum(test.get('count', 0) for test in existing_tests)
+        
+        print(f"\n1️⃣ GET /api/existing-questions/{topic_id}")
+        print(f"   Status: {'✅ WORKING' if existing_success else '❌ FAILED'}")
+        print(f"   Questions Found: {existing_count}")
+        print(f"   Purpose: Retrieve PYQ questions from questions_topic_wise table")
+        
+        # 2. PYQ Solution Generation Analysis
+        pyq_tests = results.get('generate_pyq_solution_tests', [])
+        pyq_successes = sum(1 for test in pyq_tests if test['success'])
+        pyq_total = len(pyq_tests)
+        pyq_success_rate = (pyq_successes / pyq_total * 100) if pyq_total > 0 else 0
+        
+        json_errors = sum(1 for test in pyq_tests if not test['success'] and 
+                         isinstance(test.get('data'), dict) and 
+                         test['data'].get('error') == 'json_parsing')
+        
+        print(f"\n2️⃣ POST /api/generate-pyq-solution")
+        print(f"   Success Rate: {pyq_success_rate:.1f}% ({pyq_successes}/{pyq_total})")
+        print(f"   JSON Parsing Errors: {json_errors}/{pyq_total}")
+        print(f"   Expected Issue: ~33.3% success rate with JSON parsing errors")
+        print(f"   Status: {'✅ ISSUE CONFIRMED' if 20 <= pyq_success_rate <= 50 and json_errors > 0 else '⚠️ DIFFERENT BEHAVIOR'}")
+        
+        # 3. PYQ Solution by ID Analysis
+        pyq_id_tests = results.get('generate_pyq_solution_by_id_tests', [])
+        pyq_id_successes = sum(1 for test in pyq_id_tests if test['success'])
+        pyq_id_total = len(pyq_id_tests)
+        pyq_id_success_rate = (pyq_id_successes / pyq_id_total * 100) if pyq_id_total > 0 else 0
+        
+        print(f"\n3️⃣ POST /api/generate-pyq-solution-by-id")
+        print(f"   Success Rate: {pyq_id_success_rate:.1f}% ({pyq_id_successes}/{pyq_id_total})")
+        print(f"   Status: {'✅ WORKING' if pyq_id_success_rate >= 66.7 else '❌ ISSUES FOUND'}")
+        
+        # 4. Update Question Solution Analysis
+        update_tests = results.get('update_question_solution_tests', [])
+        update_successes = sum(1 for test in update_tests if test['success'])
+        update_total = len(update_tests)
+        
+        print(f"\n4️⃣ PATCH /api/update-question-solution")
+        print(f"   Success Rate: {update_successes}/{update_total}")
+        print(f"   Purpose: Save solutions back to questions_topic_wise table")
+        print(f"   Status: {'✅ WORKING' if update_successes > 0 else '❌ FAILED'}")
+        
+        # 5. New Question Generation Analysis
+        gen_tests = results.get('generate_question_tests', [])
+        gen_successes = sum(1 for test in gen_tests if test['success'])
+        gen_total = len(gen_tests)
+        gen_success_rate = (gen_successes / gen_total * 100) if gen_total > 0 else 0
+        
+        print(f"\n5️⃣ POST /api/generate-question")
+        print(f"   Success Rate: {gen_success_rate:.1f}% ({gen_successes}/{gen_total})")
+        print(f"   Purpose: Generate new questions and save to new_questions table")
+        print(f"   Status: {'✅ WORKING' if gen_success_rate >= 66.7 else '❌ ISSUES FOUND'}")
+        
+        # 6. Data Saving Analysis
+        saving_tests = results.get('data_saving_tests', [])
+        saving_success = any(test['success'] for test in saving_tests)
+        
+        print(f"\n6️⃣ Data Saving Verification")
+        print(f"   new_questions table: {'✅ WORKING' if saving_success else '❌ ISSUES'}")
+        print(f"   questions_topic_wise table: {'✅ WORKING' if update_successes > 0 else '❌ ISSUES'}")
+        
+        # Overall Assessment
+        print(f"\n🎯 OVERALL PYQ SOLUTION SYSTEM STATUS")
+        print("=" * 60)
+        
+        critical_issues = []
+        working_components = []
+        
+        if not existing_success:
+            critical_issues.append("Cannot retrieve existing PYQ questions")
+        else:
+            working_components.append("PYQ question retrieval")
+        
+        if pyq_success_rate < 50:
+            critical_issues.append(f"PYQ solution generation low success rate ({pyq_success_rate:.1f}%)")
+        
+        if json_errors > 0:
+            critical_issues.append(f"JSON parsing errors in PYQ solutions ({json_errors} errors)")
+        
+        if update_successes == 0:
+            critical_issues.append("Cannot save solutions back to database")
+        else:
+            working_components.append("Solution saving to questions_topic_wise")
+        
+        if gen_success_rate < 66.7:
+            critical_issues.append(f"New question generation issues ({gen_success_rate:.1f}% success)")
+        else:
+            working_components.append("New question generation")
+        
+        if not saving_success:
+            critical_issues.append("Data saving to new_questions table issues")
+        else:
+            working_components.append("Data saving to new_questions")
+        
+        print(f"✅ Working Components: {', '.join(working_components) if working_components else 'None'}")
+        print(f"❌ Critical Issues: {', '.join(critical_issues) if critical_issues else 'None'}")
+        
+        # Root Cause Analysis
+        print(f"\n🔍 ROOT CAUSE ANALYSIS")
+        print("=" * 40)
+        
+        if json_errors > 0:
+            print(f"🚨 PRIMARY ISSUE: JSON Parsing Errors")
+            print(f"   - Affects: PYQ solution generation endpoint")
+            print(f"   - Error Pattern: 'Unterminated string starting at: line X column Y'")
+            print(f"   - Likely Cause: Gemini API returning malformed JSON responses")
+            print(f"   - Impact: {json_errors}/{pyq_total} requests fail with JSON errors")
+            print(f"   - Recommendation: Improve JSON parsing robustness or prompt engineering")
+        
+        if pyq_success_rate < 50:
+            print(f"🚨 SECONDARY ISSUE: Low Success Rate")
+            print(f"   - Current Rate: {pyq_success_rate:.1f}% (expected ~33.3%)")
+            print(f"   - Impact: Unreliable PYQ solution generation")
+            print(f"   - Recommendation: Implement retry logic and better error handling")
+        
+        # Success Criteria Check
+        system_health = len(working_components) / (len(working_components) + len(critical_issues)) * 100 if (len(working_components) + len(critical_issues)) > 0 else 0
+        
+        print(f"\n📈 SYSTEM HEALTH: {system_health:.1f}%")
+        if system_health >= 80:
+            print(f"✅ PYQ Solution System: MOSTLY WORKING")
+        elif system_health >= 60:
+            print(f"⚠️ PYQ Solution System: PARTIALLY WORKING")
+        else:
+            print(f"❌ PYQ Solution System: NEEDS MAJOR FIXES")
+        
+        return {
+            'existing_questions_working': existing_success,
+            'pyq_solution_success_rate': pyq_success_rate,
+            'json_parsing_errors': json_errors,
+            'update_solution_working': update_successes > 0,
+            'new_question_generation_rate': gen_success_rate,
+            'data_saving_working': saving_success,
+            'critical_issues': critical_issues,
+            'working_components': working_components,
+            'system_health': system_health
+        }
+
 def main():
-    print("🚀 Testing SUB Question Database Constraint Issue")
-    print("🎯 Focus: Review Request - SUB question type generation failure")
+    print("🚀 Testing PYQ Solution Generation System")
+    print("🎯 Focus: Review Request - Comprehensive PYQ solution testing")
     print("=" * 80)
     
     tester = QuestionMakerAPITester()

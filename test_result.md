@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Implement round-robin system for multiple Gemini API keys to resolve quota exceeded issues and update to Gemini 2.0 Flash model"
+user_problem_statement: "Fix two critical issues: 1) Question generation should use exact weightage percentages (e.g., 5.4434% weightage should generate 55 questions from 1000) instead of generating one per topic, 2) PYQ solution generation should process ALL questions in questions_topic_wise table and save answers/solutions in KaTeX+SVG format using topic notes"
 
 backend:
   - task: "Gemini round-robin API key implementation"

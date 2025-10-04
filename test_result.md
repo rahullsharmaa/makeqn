@@ -313,7 +313,6 @@ metadata:
 test_plan:
   current_focus:
     - "Final testing of complete auto-generation system"
-    - "SUB database constraint fix"
   stuck_tasks:
     - "SUB database constraint fix"
   test_all: false

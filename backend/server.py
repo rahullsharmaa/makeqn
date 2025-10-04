@@ -605,12 +605,12 @@ Respond in the following JSON format:
         if last_error and 'response' not in locals():
             raise HTTPException(status_code=500, detail=f"Failed after all retries: {str(last_error)}")
         
-        # Parse the JSON response
+        # Parse the JSON response using robust parsing
         try:
             response_text = response.text.strip()
-            solution_data = json.loads(response_text)
-        except json.JSONDecodeError as e:
-            raise HTTPException(status_code=500, detail=f"Error parsing AI response: {str(e)}")
+            solution_data = robust_parse_json(response_text)
+        except HTTPException:
+            raise
 
         # Validate the solution
         if not isinstance(solution_data, dict):
@@ -749,12 +749,12 @@ Respond in the following JSON format:
         if last_error and 'response' not in locals():
             raise HTTPException(status_code=500, detail=f"Failed after all retries: {str(last_error)}")
         
-        # Parse the JSON response
+        # Parse the JSON response using robust parsing
         try:
             response_text = response.text.strip()
-            solution_data = json.loads(response_text)
-        except json.JSONDecodeError as e:
-            raise HTTPException(status_code=500, detail=f"Error parsing AI response: {str(e)}")
+            solution_data = robust_parse_json(response_text)
+        except HTTPException:
+            raise
 
         # Validate the solution
         if not isinstance(solution_data, dict):

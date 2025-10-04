@@ -643,9 +643,26 @@ Please respond in the following JSON format:
                 # Create model with current key
                 model = create_gemini_model_with_key(current_api_key)
                 
-                # Configure generation for structured JSON output
+                # Define JSON schema for consistent output
+                response_schema = genai.protos.Schema(
+                    type=genai.protos.Type.OBJECT,
+                    properties={
+                        "question_statement": genai.protos.Schema(type=genai.protos.Type.STRING),
+                        "options": genai.protos.Schema(
+                            type=genai.protos.Type.ARRAY,
+                            items=genai.protos.Schema(type=genai.protos.Type.STRING)
+                        ),
+                        "answer": genai.protos.Schema(type=genai.protos.Type.STRING),
+                        "solution": genai.protos.Schema(type=genai.protos.Type.STRING),
+                        "difficulty_level": genai.protos.Schema(type=genai.protos.Type.STRING)
+                    },
+                    required=["question_statement", "answer", "solution", "difficulty_level"]
+                )
+                
+                # Configure generation for structured JSON output with schema
                 generation_config = genai.types.GenerationConfig(
                     response_mime_type="application/json",
+                    response_schema=response_schema,
                     temperature=0.7
                 )
                 
